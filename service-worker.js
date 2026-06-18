@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bir-hamle-daha-v1';
+const CACHE_NAME = 'bir-hamle-daha-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,11 +6,11 @@ const APP_SHELL = [
   './src/app.js',
   './src/game-engine.js',
   './src/styles.css',
-  './assets/icon.svg',
-  './assets/icon-maskable.svg',
   './assets/icon-180.png',
   './assets/icon-192.png',
-  './assets/icon-512.png'
+  './assets/icon-512.png',
+  './assets/icon.svg',
+  './assets/icon-maskable.svg'
 ];
 
 self.addEventListener('install', (event) => {
