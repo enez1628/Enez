@@ -19,28 +19,38 @@ export function createSeededRandom(seed) {
   };
 }
 
-export function createLevels(count = 30) {
+export function createLevels(count = 150) {
   return Array.from({ length: count }, (_, index) => {
     const levelNumber = index + 1;
-    const width = levelNumber < 6 ? 5 : 6;
-    const height = levelNumber < 6 ? 6 : 7;
-    const symbolCount = Math.min(3 + Math.floor(levelNumber / 6), SYMBOLS.length);
+    const band = levelNumber <= 40 ? 'Kolay' : levelNumber <= 95 ? 'Orta' : 'Zor';
+    const width = levelNumber <= 15 ? 5 : levelNumber <= 95 ? 6 : 7;
+    const height = levelNumber <= 15 ? 6 : 7;
+    const symbolCount = Math.min(3 + Math.floor(levelNumber / 18), SYMBOLS.length);
     const primary = SYMBOLS[index % symbolCount].id;
     const secondary = SYMBOLS[(index + 2) % symbolCount].id;
+    const tertiary = SYMBOLS[(index + 4) % symbolCount].id;
     const hardLevel = levelNumber % 10 === 0;
-    const moveLimit = Math.max(10, 16 - Math.floor(levelNumber / 5) + (hardLevel ? -2 : 0));
+    const moveLimit = Math.max(14, 22 + Math.floor(levelNumber / 10) - (hardLevel ? 2 : 0));
+    const timeLimit = Math.max(70, 125 + Math.floor(levelNumber / 3) - (hardLevel ? 15 : 0));
+    const goals = {
+      [primary]: 10 + Math.floor(levelNumber * 1.05),
+      [secondary]: 7 + Math.floor(levelNumber * 0.75)
+    };
+
+    if (levelNumber >= 45) {
+      goals[tertiary] = 6 + Math.floor(levelNumber * 0.45);
+    }
 
     return {
       id: levelNumber,
+      band,
       width,
       height,
       seed: 7000 + levelNumber * 97,
       moveLimit,
+      timeLimit,
       symbolIds: SYMBOLS.slice(0, symbolCount).map((symbol) => symbol.id),
-      goals: {
-        [primary]: 8 + Math.floor(levelNumber * 0.9),
-        [secondary]: 5 + Math.floor(levelNumber * 0.55)
-      }
+      goals
     };
   });
 }
@@ -55,6 +65,7 @@ export function cloneState(state) {
     board: cloneBoard(state.board),
     goals: { ...state.goals },
     boosters: { ...state.boosters },
+    invalidTiles: [...(state.invalidTiles ?? [])],
     history: state.history.map((entry) => ({
       ...entry,
       board: cloneBoard(entry.board),
@@ -87,6 +98,7 @@ export function createInitialState(levels = createLevels()) {
     board: generateBoard(firstLevel),
     goals: { ...firstLevel.goals },
     movesRemaining: firstLevel.moveLimit,
+    timeRemaining: firstLevel.timeLimit,
     score: 0,
     gold: 250,
     lives: 5,
@@ -96,6 +108,8 @@ export function createInitialState(levels = createLevels()) {
     status: 'playing',
     message: 'Ayni sembolden 2+ tas sec.',
     highlighted: [],
+    invalidTiles: [],
+    lastPenalty: null,
     lastStars: 0,
     boosters: {
       hint: 3,
@@ -186,7 +200,9 @@ export function isLevelComplete(goals) {
 
 export function getStars(state) {
   const level = getCurrentLevel(state);
-  const ratio = state.movesRemaining / level.moveLimit;
+  const moveRatio = state.movesRemaining / level.moveLimit;
+  const timeRatio = state.timeRemaining / level.timeLimit;
+  const ratio = (moveRatio + timeRatio) / 2;
 
   if (ratio >= 0.35) return 3;
   if (ratio >= 0.15) return 2;
@@ -198,6 +214,7 @@ function pushHistory(nextState) {
     board: cloneBoard(nextState.board),
     goals: { ...nextState.goals },
     movesRemaining: nextState.movesRemaining,
+    timeRemaining: nextState.timeRemaining,
     score: nextState.score,
     boosters: { ...nextState.boosters },
     message: nextState.message
@@ -214,11 +231,26 @@ export function applyMove(state, x, y, random = Math.random) {
 
   const group = findGroup(state.board, x, y);
   if (group.length < 2) {
-    return {
+    const nextState = {
       ...state,
-      highlighted: group.map((item) => `${item.x},${item.y}`),
-      message: 'En az 2 ayni tas yan yana olmali.'
+      highlighted: [],
+      invalidTiles: [`${x},${y}`],
+      lastPenalty: { moves: 1, seconds: 5, score: 25 },
+      movesRemaining: Math.max(0, state.movesRemaining - 1),
+      timeRemaining: Math.max(0, state.timeRemaining - 5),
+      score: Math.max(0, state.score - 25),
+      message: 'Yanlis hamle! -1 hamle, -5 sn, -25 puan.'
     };
+
+    if (nextState.movesRemaining === 0 || nextState.timeRemaining === 0) {
+      return {
+        ...nextState,
+        status: 'lost',
+        message: 'Yanlis hamle pahaliya patladi. Reklam izleyip devam edebilirsin.'
+      };
+    }
+
+    return nextState;
   }
 
   const level = getCurrentLevel(state);
@@ -248,8 +280,11 @@ export function applyMove(state, x, y, random = Math.random) {
     board: collapseBoard(nextBoard, level, random),
     goals,
     movesRemaining: Math.max(0, nextState.movesRemaining - 1),
+    timeRemaining: nextState.timeRemaining,
     score: nextState.score + group.length * group.length * 10 + comboBonus + unlocked.length * 25,
     highlighted: [],
+    invalidTiles: [],
+    lastPenalty: null,
     message: group.length >= 4 ? `Kombo! ${targetMessage}` : targetMessage
   };
 
@@ -265,11 +300,13 @@ export function applyMove(state, x, y, random = Math.random) {
     };
   }
 
-  if (nextState.movesRemaining === 0) {
+  if (nextState.movesRemaining === 0 || nextState.timeRemaining === 0) {
     return {
       ...nextState,
       status: 'lost',
-      message: 'Cok az kaldi! Reklam izleyip +5 hamle alabilirsin.'
+      message: nextState.timeRemaining === 0
+        ? 'Sure bitti! Reklam izleyip devam edebilirsin.'
+        : 'Cok az kaldi! Reklam izleyip +5 hamle alabilirsin.'
     };
   }
 
@@ -283,8 +320,10 @@ export function continueWithAd(state) {
     ...state,
     status: 'playing',
     movesRemaining: state.movesRemaining + 5,
+    timeRemaining: state.timeRemaining + 30,
     adWatches: state.adWatches + 1,
-    message: 'Reklam odulu geldi: +5 hamle.'
+    invalidTiles: [],
+    message: 'Reklam odulu geldi: +5 hamle ve +30 sn.'
   };
 }
 
@@ -295,8 +334,10 @@ export function continueWithGold(state, cost = 120) {
     ...state,
     status: 'playing',
     movesRemaining: state.movesRemaining + 5,
+    timeRemaining: state.timeRemaining + 30,
     gold: state.gold - cost,
-    message: 'Altin ile +5 hamle alindi.'
+    invalidTiles: [],
+    message: 'Altin ile +5 hamle ve +30 sn alindi.'
   };
 }
 
@@ -322,9 +363,12 @@ export function startLevel(state, levelIndex = state.levelIndex) {
     board: generateBoard(level, random),
     goals: { ...level.goals },
     movesRemaining: level.moveLimit,
+    timeRemaining: level.timeLimit,
     score: 0,
     status: 'playing',
     highlighted: [],
+    invalidTiles: [],
+    lastPenalty: null,
     message: 'Ayni sembolden 2+ tas sec.',
     history: []
   };
@@ -406,10 +450,33 @@ export function useUndo(state) {
     board: cloneBoard(previous.board),
     goals: { ...previous.goals },
     movesRemaining: previous.movesRemaining,
+    timeRemaining: previous.timeRemaining,
     score: previous.score,
     boosters: { ...state.boosters, undo: state.boosters.undo - 1 },
     highlighted: [],
+    invalidTiles: [],
     history: state.history.slice(0, -1),
     message: 'Son hamle geri alindi.'
   };
+}
+
+export function tickTimer(state, seconds = 1) {
+  if (state.status !== 'playing') return state;
+
+  const timeRemaining = Math.max(0, state.timeRemaining - seconds);
+  const nextState = {
+    ...state,
+    timeRemaining,
+    invalidTiles: []
+  };
+
+  if (timeRemaining === 0) {
+    return {
+      ...nextState,
+      status: 'lost',
+      message: 'Sure bitti! Reklam izleyip +5 hamle ve +30 sn alabilirsin.'
+    };
+  }
+
+  return nextState;
 }

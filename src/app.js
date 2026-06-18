@@ -12,6 +12,7 @@ import {
   nextLevel,
   quitLevel,
   startLevel,
+  tickTimer,
   useHint,
   useShuffle,
   useUndo,
@@ -27,12 +28,15 @@ const elements = {
   dailyStreak: document.querySelector('#daily-streak'),
   claimDaily: document.querySelector('#claim-daily'),
   playButton: document.querySelector('#play-button'),
+  continueButton: document.querySelector('#continue-button'),
   watchLifeAd: document.querySelector('#watch-life-ad'),
   levelStrip: document.querySelector('#level-strip'),
   backHome: document.querySelector('#back-home'),
   levelLabel: document.querySelector('#level-label'),
   moveLabel: document.querySelector('#move-label'),
+  timerLabel: document.querySelector('#timer-label'),
   goldLabel: document.querySelector('#gold-label'),
+  difficultyLabel: document.querySelector('#difficulty-label'),
   goalList: document.querySelector('#goal-list'),
   scoreLabel: document.querySelector('#score-label'),
   message: document.querySelector('#message'),
@@ -40,9 +44,11 @@ const elements = {
   hintButton: document.querySelector('#hint-button'),
   shuffleButton: document.querySelector('#shuffle-button'),
   undoButton: document.querySelector('#undo-button'),
+  soundButton: document.querySelector('#sound-button'),
   hintCount: document.querySelector('#hint-count'),
   shuffleCount: document.querySelector('#shuffle-count'),
   undoCount: document.querySelector('#undo-count'),
+  soundLabel: document.querySelector('#sound-label'),
   modal: document.querySelector('#modal'),
   modalBadge: document.querySelector('#modal-badge'),
   modalTitle: document.querySelector('#modal-title'),
@@ -50,8 +56,55 @@ const elements = {
   modalActions: document.querySelector('#modal-actions')
 };
 
-let state = createInitialState(createLevels(30));
+const STORAGE_KEY = 'bir-hamle-daha-save-v2';
+let state = loadSavedState() ?? createInitialState(createLevels(150));
 let resolvingMove = false;
+let audioContext = null;
+let musicTimer = null;
+let musicEnabled = false;
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    const levels = createLevels(150);
+    const level = levels[saved.levelIndex] ?? levels[0];
+    const base = createInitialState(levels);
+
+    return {
+      ...base,
+      ...saved,
+      levels,
+      goals: saved.goals ?? { ...level.goals },
+      board: saved.board ?? base.board,
+      movesRemaining: Number.isFinite(saved.movesRemaining) ? saved.movesRemaining : level.moveLimit,
+      timeRemaining: Number.isFinite(saved.timeRemaining) ? saved.timeRemaining : level.timeLimit,
+      boosters: { hint: 3, shuffle: 2, undo: 2, ...(saved.boosters ?? {}) },
+      highlighted: [],
+      invalidTiles: [],
+      history: Array.isArray(saved.history) ? saved.history : []
+    };
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    ...state,
+    savedAt: Date.now(),
+    highlighted: [],
+    invalidTiles: []
+  }));
+}
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
 
 function setScreen(screen) {
   elements.homeScreen.classList.toggle('active', screen === 'home');
@@ -66,10 +119,10 @@ function formatGoals(goals) {
 }
 
 function renderLevelStrip() {
-  elements.levelStrip.innerHTML = state.levels.slice(0, 12).map((level, index) => {
+  elements.levelStrip.innerHTML = state.levels.slice(0, 24).map((level, index) => {
     const active = index === state.levelIndex ? 'active' : '';
     const done = index < state.levelIndex ? 'done' : '';
-    return `<button class="level-node ${active} ${done}" data-level="${index}">${level.id}</button>`;
+    return `<button class="level-node ${active} ${done}" data-level="${index}"><span>${level.id}</span><small>${level.band}</small></button>`;
   }).join('');
 }
 
@@ -80,6 +133,7 @@ function renderHome() {
   elements.dailyStreak.textContent = state.dailyClaimed ? 'Bugunku odul alindi' : '1. gun odulu hazir';
   elements.claimDaily.disabled = state.dailyClaimed;
   elements.playButton.disabled = state.lives <= 0;
+  elements.continueButton.classList.toggle('hidden', state.status !== 'playing');
   elements.watchLifeAd.disabled = state.lives >= 5;
   renderLevelStrip();
 }
@@ -92,10 +146,11 @@ function renderBoard() {
       const symbol = symbolById.get(tile.symbol) ?? SYMBOLS[0];
       const key = `${x},${y}`;
       const highlighted = state.highlighted.includes(key) ? 'highlighted' : '';
+      const invalid = state.invalidTiles?.includes(key) ? 'invalid' : '';
       const locked = tile.locked ? 'locked' : '';
       return `
         <button
-          class="tile ${symbol.color} ${highlighted} ${locked}"
+          class="tile ${symbol.color} ${highlighted} ${invalid} ${locked}"
           data-x="${x}"
           data-y="${y}"
           aria-label="${symbol.label} tasi"
@@ -112,6 +167,9 @@ function renderGame() {
   const level = getCurrentLevel(state);
   elements.levelLabel.textContent = `Bolum ${level.id}`;
   elements.moveLabel.textContent = `Hamle: ${state.movesRemaining}`;
+  elements.timerLabel.textContent = formatTime(state.timeRemaining);
+  elements.timerLabel.parentElement.classList.toggle('urgent', state.timeRemaining <= 20);
+  elements.difficultyLabel.textContent = level.band;
   elements.goldLabel.textContent = state.gold;
   elements.goalList.innerHTML = formatGoals(state.goals);
   elements.scoreLabel.textContent = state.score;
@@ -122,12 +180,14 @@ function renderGame() {
   elements.hintButton.disabled = state.boosters.hint <= 0 || state.status !== 'playing';
   elements.shuffleButton.disabled = state.boosters.shuffle <= 0 || state.status !== 'playing';
   elements.undoButton.disabled = state.boosters.undo <= 0 || state.history.length === 0 || state.status !== 'playing';
+  elements.soundLabel.textContent = musicEnabled ? 'Acik' : 'Kapali';
   renderBoard();
 }
 
 function render() {
   renderHome();
   renderGame();
+  saveState();
 }
 
 function hideModal() {
@@ -156,8 +216,8 @@ function showModal({ badge, title, copy, actions }) {
 function openLostModal() {
   const totalRemaining = Object.values(state.goals).reduce((sum, value) => sum + Math.max(0, value), 0);
   const closeCopy = totalRemaining <= 8
-    ? 'Gercekten cok az kaldi. 5 hamle ile bolumu bitirebilirsin.'
-    : 'Stratejini degistir veya 5 hamle daha alarak devam et.';
+    ? 'Gercekten cok az kaldi. 5 hamle ve 30 saniye ile bitirebilirsin.'
+    : 'Stratejini degistir veya 5 hamle + 30 saniye daha alarak devam et.';
 
   showModal({
     badge: 'Son Hamle Analizi',
@@ -165,7 +225,7 @@ function openLostModal() {
     copy: closeCopy,
     actions: [
       {
-        label: 'Reklam Izle +5 Hamle',
+        label: 'Reklam Izle +5 Hamle +30 sn',
         onClick: () => {
           elements.modalCopy.textContent = 'Reklam simule ediliyor... 3';
           let count = 2;
@@ -183,7 +243,7 @@ function openLostModal() {
         }
       },
       {
-        label: '120 Altin Harca',
+        label: '120 Altin Harca +5 Hamle',
         variant: 'secondary-button',
         disabled: state.gold < 120,
         onClick: () => {
@@ -235,9 +295,58 @@ function openWinModal() {
   });
 }
 
+function playTone(frequency, startAt, duration) {
+  if (!audioContext) return;
+
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.value = frequency;
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(0.045, startAt + 0.04);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  oscillator.connect(gain).connect(audioContext.destination);
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration + 0.03);
+}
+
+function scheduleMusicLoop() {
+  if (!musicEnabled || !audioContext) return;
+
+  const now = audioContext.currentTime;
+  const notes = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 349.23];
+  notes.forEach((note, index) => playTone(note, now + index * 0.36, 0.28));
+  musicTimer = window.setTimeout(scheduleMusicLoop, 3000);
+}
+
+function toggleMusic() {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
+
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+
+  musicEnabled = !musicEnabled;
+  window.clearTimeout(musicTimer);
+
+  if (musicEnabled) {
+    scheduleMusicLoop();
+  }
+
+  render();
+}
+
 elements.playButton.addEventListener('click', () => {
   if (state.lives <= 0) return;
   state = startLevel(state, state.levelIndex);
+  setScreen('game');
+  hideModal();
+  render();
+});
+
+elements.continueButton.addEventListener('click', () => {
   setScreen('game');
   hideModal();
   render();
@@ -300,6 +409,15 @@ elements.board.addEventListener('click', (event) => {
 
   state = applyMove(state, x, y);
   render();
+
+  if (state.invalidTiles?.length > 0) {
+    window.setTimeout(() => {
+      state = { ...state, invalidTiles: [] };
+      render();
+    }, 520);
+  }
+
+  if (state.status === 'lost') openLostModal();
 });
 
 elements.hintButton.addEventListener('click', () => {
@@ -316,5 +434,21 @@ elements.undoButton.addEventListener('click', () => {
   state = useUndo(state);
   render();
 });
+
+elements.soundButton.addEventListener('click', () => {
+  toggleMusic();
+});
+
+window.setInterval(() => {
+  const gameVisible = elements.gameScreen.classList.contains('active');
+  if (!gameVisible || resolvingMove || state.status !== 'playing') return;
+
+  state = tickTimer(state);
+  render();
+
+  if (state.status === 'lost') {
+    openLostModal();
+  }
+}, 1000);
 
 render();

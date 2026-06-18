@@ -9,6 +9,7 @@ import {
   isLevelComplete,
   quitLevel,
   startLevel,
+  tickTimer,
   useHint,
   useUndo
 } from '../src/game-engine.js';
@@ -20,6 +21,8 @@ const testLevels = [
     height: 3,
     seed: 11,
     moveLimit: 2,
+    timeLimit: 30,
+    band: 'Kolay',
     symbolIds: ['leaf', 'sun', 'moon'],
     goals: { leaf: 2 }
   }
@@ -93,7 +96,27 @@ function alwaysLeaf() {
 
   assert.equal(state.status, 'playing');
   assert.equal(state.movesRemaining, 5);
+  assert.equal(state.timeRemaining, 60);
   assert.equal(state.adWatches, 1);
+}
+
+{
+  const setup = makeState();
+  setup.board[0][2] = { id: '2-0', symbol: 'flower', locked: false };
+  const state = applyMove(setup, 2, 0, alwaysLeaf);
+
+  assert.equal(state.status, 'playing');
+  assert.equal(state.movesRemaining, 1);
+  assert.equal(state.timeRemaining, 25);
+  assert.equal(state.score, 0);
+  assert.deepEqual(state.invalidTiles, ['2,0']);
+}
+
+{
+  const state = tickTimer(makeState(), 30);
+
+  assert.equal(state.status, 'lost');
+  assert.equal(state.timeRemaining, 0);
 }
 
 {
@@ -135,7 +158,7 @@ function alwaysLeaf() {
 }
 
 {
-  let state = startLevel(createInitialState(createLevels(30)), 11);
+  let state = startLevel(createInitialState(createLevels(150)), 11);
   const targetGroup = state.board
     .flatMap((row, y) => row.map((tile, x) => ({ tile, x, y })))
     .map(({ x, y }) => findGroup(state.board, x, y))
@@ -148,6 +171,15 @@ function alwaysLeaf() {
   state = applyMove(state, targetGroup[0].x, targetGroup[0].y, alwaysLeaf);
 
   assert.equal(state.goals[symbol], before - targetGroup.length);
+}
+
+{
+  const levels = createLevels();
+
+  assert.equal(levels.length, 150);
+  assert.equal(levels[0].band, 'Kolay');
+  assert.equal(levels[50].band, 'Orta');
+  assert.equal(levels[120].band, 'Zor');
 }
 
 console.log('game-engine tests passed');

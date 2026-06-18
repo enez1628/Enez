@@ -37,7 +37,12 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.68;
+  filter: grayscale(0.15);
+}
+
+.hidden {
+  display: none !important;
 }
 
 .ambient {
@@ -243,7 +248,6 @@ h1 {
 
 .daily-card,
 .goal-card,
-.top-bar,
 .boosters {
   display: flex;
   align-items: center;
@@ -347,6 +351,10 @@ h1 {
 }
 
 .top-bar {
+  display: grid;
+  grid-template-columns: 46px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
   padding: 10px 0 4px;
 }
 
@@ -379,6 +387,7 @@ h1 {
 }
 
 .coin-pill,
+.timer-pill,
 .score-pill {
   min-width: 80px;
   padding: 10px 12px;
@@ -390,10 +399,30 @@ h1 {
 }
 
 .coin-pill strong,
+.timer-pill strong,
 .score-pill strong {
   display: block;
   color: #835600;
   font-size: 1.15rem;
+}
+
+.timer-pill {
+  background:
+    linear-gradient(180deg, #edf9ff, #bfe9ff);
+  box-shadow: inset 0 -3px 0 rgba(25, 102, 141, 0.1);
+}
+
+.timer-pill strong {
+  color: #17506f;
+}
+
+.timer-pill.urgent {
+  background: linear-gradient(180deg, #ffe7e4, #ffb2a6);
+  animation: urgent-pulse 820ms ease-in-out infinite;
+}
+
+.timer-pill.urgent strong {
+  color: #9c1f17;
 }
 
 .goal-list {
@@ -403,17 +432,53 @@ h1 {
   margin-top: 8px;
 }
 
+.goal-card {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(47, 156, 124, 0.24);
+  background:
+    radial-gradient(circle at 8% 12%, rgba(255, 255, 255, 0.9), transparent 8rem),
+    linear-gradient(135deg, rgba(232, 255, 244, 0.94), rgba(255, 248, 218, 0.9));
+}
+
+.goal-card::before {
+  content: "GOREV";
+  position: absolute;
+  top: 8px;
+  right: -20px;
+  transform: rotate(22deg);
+  color: rgba(47, 156, 124, 0.11);
+  font-size: 2.3rem;
+  font-weight: 1000;
+}
+
+.difficulty-label {
+  display: inline-flex;
+  margin-top: 5px;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #1f6767;
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.8rem;
+}
+
 .goal-token {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 6px 10px;
+  min-height: 42px;
+  padding: 7px 12px;
   border-radius: 999px;
   color: #ffffff;
   background: #2f9c7c;
   font-weight: 900;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.goal-token b {
+  font-size: 1.02rem;
 }
 
 .goal-token small {
@@ -498,6 +563,14 @@ h1 {
   transform: translateY(-2px) scale(1.03);
 }
 
+.tile.invalid {
+  outline: 4px solid rgba(255, 74, 74, 0.95);
+  animation: wrong-shake 420ms ease both;
+  box-shadow:
+    0 0 0 8px rgba(255, 74, 74, 0.22),
+    inset 0 -5px 0 rgba(0, 0, 0, 0.12);
+}
+
 .tile.locked {
   color: #4f5d62;
   background: #cfd8dc;
@@ -512,12 +585,13 @@ h1 {
 
 .boosters {
   margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .boosters button {
-  flex: 1;
-  min-height: 58px;
-  padding: 8px;
+  min-height: 68px;
+  padding: 8px 5px;
   border-radius: 20px;
   color: #244f55;
   background: linear-gradient(180deg, #ffffff, #eef9f5);
@@ -529,6 +603,18 @@ h1 {
 
 .boosters span {
   display: block;
+}
+
+.booster-icon {
+  width: 26px;
+  height: 26px;
+  display: grid !important;
+  place-items: center;
+  margin: 0 auto 4px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #38aa83, #23756f);
+  font-weight: 1000;
 }
 
 .boosters strong {
@@ -650,6 +736,33 @@ h1 {
   }
   50% {
     transform: translateY(-5px);
+  }
+}
+
+@keyframes wrong-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(6px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-4px) rotate(-1deg);
+  }
+  80% {
+    transform: translateX(4px) rotate(1deg);
+  }
+}
+
+@keyframes urgent-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
   }
 }
 
