@@ -57,11 +57,12 @@ const elements = {
 };
 
 const STORAGE_KEY = 'bir-hamle-daha-save-v2';
+const SOUND_KEY = 'bir-hamle-daha-music-enabled';
 let state = loadSavedState() ?? createInitialState(createLevels(150));
 let resolvingMove = false;
 let audioContext = null;
 let musicTimer = null;
-let musicEnabled = false;
+let musicEnabled = localStorage.getItem(SOUND_KEY) === 'true';
 
 function loadSavedState() {
   try {
@@ -329,12 +330,23 @@ function toggleMusic() {
   }
 
   musicEnabled = !musicEnabled;
+  localStorage.setItem(SOUND_KEY, String(musicEnabled));
   window.clearTimeout(musicTimer);
 
   if (musicEnabled) {
     scheduleMusicLoop();
   }
 
+  render();
+}
+
+function startSavedMusicOnInteraction() {
+  if (!musicEnabled || audioContext) return;
+  audioContext = new AudioContext();
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+  scheduleMusicLoop();
   render();
 }
 
@@ -438,6 +450,8 @@ elements.undoButton.addEventListener('click', () => {
 elements.soundButton.addEventListener('click', () => {
   toggleMusic();
 });
+
+document.addEventListener('pointerdown', startSavedMusicOnInteraction);
 
 window.setInterval(() => {
   const gameVisible = elements.gameScreen.classList.contains('active');
