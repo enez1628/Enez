@@ -76,7 +76,13 @@ Not: Bu komut icin Android SDK ve Java/Gradle ortami gerekir.
 
 ## iPhone'da deneme
 
-PR main branch'e merge edildikten ve GitHub Pages workflow'u tamamlandiktan sonra iPhone'da su link acilir:
+PR merge edilmeden hemen denemek icin iPhone'da su gecici link acilir:
+
+```text
+https://raw.githack.com/enez1628/Enez/cursor/bir-hamle-daha-prototype-7d76/index.html
+```
+
+PR main branch'e merge edildikten ve GitHub Pages workflow'u tamamlandiktan sonra kalici link su olur:
 
 ```text
 https://enez1628.github.io/Enez/
@@ -84,7 +90,7 @@ https://enez1628.github.io/Enez/
 
 iPhone'da:
 
-1. Safari ile linke git.
+1. Safari ile test linkine veya kalici linke git.
 2. Paylas butonuna bas.
 3. "Ana Ekrana Ekle" sec.
 4. "Ekle" butonuna bas.
