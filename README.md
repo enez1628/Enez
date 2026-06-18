@@ -76,14 +76,23 @@ Not: Bu komut icin Android SDK ve Java/Gradle ortami gerekir.
 
 ## iPhone'da deneme
 
-Hemen denemek icin:
+PR main branch'e merge edildikten ve GitHub Pages workflow'u tamamlandiktan sonra iPhone'da su link acilir:
 
-1. Oyunu bir web adresinde yayinla.
-2. iPhone'da Safari ile ac.
-3. Paylas butonuna bas.
-4. "Ana Ekrana Ekle" sec.
+```text
+https://enez1628.github.io/Enez/
+```
+
+iPhone'da:
+
+1. Safari ile linke git.
+2. Paylas butonuna bas.
+3. "Ana Ekrana Ekle" sec.
+4. "Ekle" butonuna bas.
+5. Ana ekrandaki "Bir Hamle Daha" ikonundan oyunu ac.
 
 Bu yol App Store gerektirmez.
+
+Daha detayli rehber: `docs/iphone-test.md`
 
 ## iOS / TestFlight hazirlama
 
