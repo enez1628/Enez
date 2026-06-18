@@ -1,10 +1,10 @@
 export const SYMBOLS = [
-  { id: 'leaf', icon: 'Y', label: 'Yaprak', color: 'green' },
-  { id: 'sun', icon: 'G', label: 'Gunes', color: 'yellow' },
-  { id: 'moon', icon: 'A', label: 'Ay', color: 'purple' },
-  { id: 'drop', icon: 'D', label: 'Damla', color: 'blue' },
-  { id: 'flower', icon: 'C', label: 'Cicek', color: 'pink' },
-  { id: 'star', icon: 'S', label: 'Yildiz', color: 'orange' }
+  { id: 'leaf', icon: 'YA', label: 'Yaprak', color: 'green' },
+  { id: 'sun', icon: 'GU', label: 'Gunes', color: 'yellow' },
+  { id: 'moon', icon: 'AY', label: 'Ay', color: 'purple' },
+  { id: 'drop', icon: 'SU', label: 'Damla', color: 'blue' },
+  { id: 'flower', icon: 'CI', label: 'Cicek', color: 'pink' },
+  { id: 'star', icon: 'YZ', label: 'Yildiz', color: 'orange' }
 ];
 
 export const symbolById = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
@@ -226,6 +226,8 @@ export function applyMove(state, x, y, random = Math.random) {
   const nextBoard = cloneBoard(nextState.board);
   const goals = { ...nextState.goals };
   const symbol = group[0].tile.symbol;
+  const symbolMeta = symbolById.get(symbol);
+  let targetMessage = `${group.length} ${symbolMeta.label} tasi temizlendi.`;
 
   group.forEach(({ x: tileX, y: tileY }) => {
     nextBoard[tileY][tileX] = null;
@@ -233,7 +235,13 @@ export function applyMove(state, x, y, random = Math.random) {
 
   const unlocked = unlockAdjacent(nextBoard, group);
   const comboBonus = group.length >= 5 ? 100 : group.length >= 4 ? 50 : 0;
-  goals[symbol] = Math.max(0, (goals[symbol] ?? 0) - group.length);
+  if (Object.hasOwn(goals, symbol)) {
+    const beforeGoal = goals[symbol];
+    goals[symbol] = Math.max(0, goals[symbol] - group.length);
+    targetMessage = `${symbolMeta.label} hedefi: ${beforeGoal} -> ${goals[symbol]}.`;
+  } else {
+    targetMessage = `${symbolMeta.label} hedef degil; hedefler degismedi.`;
+  }
 
   nextState = {
     ...nextState,
@@ -242,7 +250,7 @@ export function applyMove(state, x, y, random = Math.random) {
     movesRemaining: Math.max(0, nextState.movesRemaining - 1),
     score: nextState.score + group.length * group.length * 10 + comboBonus + unlocked.length * 25,
     highlighted: [],
-    message: group.length >= 4 ? `Kombo! ${group.length} tas temizlendi.` : `${group.length} tas temizlendi.`
+    message: group.length >= 4 ? `Kombo! ${targetMessage}` : targetMessage
   };
 
   if (isLevelComplete(nextState.goals)) {

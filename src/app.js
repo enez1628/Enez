@@ -7,6 +7,7 @@ import {
   continueWithGold,
   createInitialState,
   createLevels,
+  findGroup,
   getCurrentLevel,
   nextLevel,
   quitLevel,
@@ -50,6 +51,7 @@ const elements = {
 };
 
 let state = createInitialState(createLevels(30));
+let resolvingMove = false;
 
 function setScreen(screen) {
   elements.homeScreen.classList.toggle('active', screen === 'home');
@@ -59,7 +61,7 @@ function setScreen(screen) {
 function formatGoals(goals) {
   return Object.entries(goals).map(([symbolId, remaining]) => {
     const symbol = symbolById.get(symbolId);
-    return `<span class="goal-token ${symbol.color}"><b>${symbol.icon}</b> ${Math.max(0, remaining)}</span>`;
+    return `<span class="goal-token ${symbol.color}"><b>${symbol.icon}</b><small>${symbol.label}</small> ${Math.max(0, remaining)}</span>`;
   }).join('');
 }
 
@@ -98,7 +100,8 @@ function renderBoard() {
           data-y="${y}"
           aria-label="${symbol.label} tasi"
         >
-          <span>${tile.locked ? 'K' : symbol.icon}</span>
+          <span class="tile-code">${tile.locked ? 'K' : symbol.icon}</span>
+          <small>${tile.locked ? 'Kilit' : symbol.label}</small>
         </button>
       `;
     })
@@ -267,13 +270,36 @@ elements.levelStrip.addEventListener('click', (event) => {
 });
 
 elements.board.addEventListener('click', (event) => {
+  if (resolvingMove) return;
   const button = event.target.closest('[data-x]');
   if (!button) return;
-  state = applyMove(state, Number(button.dataset.x), Number(button.dataset.y));
-  render();
 
-  if (state.status === 'lost') openLostModal();
-  if (state.status === 'won') openWinModal();
+  const x = Number(button.dataset.x);
+  const y = Number(button.dataset.y);
+  const group = findGroup(state.board, x, y);
+
+  if (group.length >= 2) {
+    resolvingMove = true;
+    state = {
+      ...state,
+      highlighted: group.map((item) => `${item.x},${item.y}`),
+      message: `${group.length} tas secildi...`
+    };
+    render();
+
+    window.setTimeout(() => {
+      state = applyMove(state, x, y);
+      resolvingMove = false;
+      render();
+
+      if (state.status === 'lost') openLostModal();
+      if (state.status === 'won') openWinModal();
+    }, 320);
+    return;
+  }
+
+  state = applyMove(state, x, y);
+  render();
 });
 
 elements.hintButton.addEventListener('click', () => {

@@ -4,9 +4,11 @@ import {
   claimDailyReward,
   continueWithAd,
   createInitialState,
+  createLevels,
   findGroup,
   isLevelComplete,
   quitLevel,
+  startLevel,
   useHint,
   useUndo
 } from '../src/game-engine.js';
@@ -72,6 +74,14 @@ function alwaysLeaf() {
 }
 
 {
+  const state = applyMove(makeState(), 1, 1, alwaysLeaf);
+
+  assert.deepEqual(Object.keys(state.goals), ['leaf']);
+  assert.equal(state.goals.leaf, 2);
+  assert.equal(state.status, 'playing');
+}
+
+{
   let state = makeState();
   state = { ...state, goals: { leaf: 99 }, movesRemaining: 1 };
   state = applyMove(state, 0, 0, alwaysLeaf);
@@ -122,6 +132,22 @@ function alwaysLeaf() {
   assert.equal(state.dailyClaimed, true);
   assert.equal(state.gold, 325);
   assert.equal(state.boosters.hint, 4);
+}
+
+{
+  let state = startLevel(createInitialState(createLevels(30)), 11);
+  const targetGroup = state.board
+    .flatMap((row, y) => row.map((tile, x) => ({ tile, x, y })))
+    .map(({ x, y }) => findGroup(state.board, x, y))
+    .find((group) => group.length >= 2 && Object.hasOwn(state.goals, group[0].tile.symbol));
+
+  assert.ok(targetGroup);
+
+  const symbol = targetGroup[0].tile.symbol;
+  const before = state.goals[symbol];
+  state = applyMove(state, targetGroup[0].x, targetGroup[0].y, alwaysLeaf);
+
+  assert.equal(state.goals[symbol], before - targetGroup.length);
 }
 
 console.log('game-engine tests passed');
