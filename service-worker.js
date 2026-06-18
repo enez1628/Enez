@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bir-hamle-daha-v2';
+const CACHE_NAME = 'bir-hamle-daha-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,9 +8,7 @@ const APP_SHELL = [
   './src/styles.css',
   './assets/icon-180.png',
   './assets/icon-192.png',
-  './assets/icon-512.png',
-  './assets/icon.svg',
-  './assets/icon-maskable.svg'
+  './assets/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
