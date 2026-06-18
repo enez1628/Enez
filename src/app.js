@@ -62,7 +62,7 @@ let state = loadSavedState() ?? createInitialState(createLevels(150));
 let resolvingMove = false;
 let audioContext = null;
 let musicTimer = null;
-let musicEnabled = localStorage.getItem(SOUND_KEY) === 'true';
+let musicEnabled = localStorage.getItem(SOUND_KEY) === 'true' || state.musicEnabled === true;
 
 function loadSavedState() {
   try {
@@ -96,6 +96,7 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     ...state,
     savedAt: Date.now(),
+    musicEnabled,
     highlighted: [],
     invalidTiles: []
   }));
