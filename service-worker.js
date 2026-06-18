@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bir-hamle-daha-v3';
+const CACHE_NAME = 'bir-hamle-daha-v4';
 const APP_SHELL = [
   './',
   './index.html',
