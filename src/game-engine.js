@@ -105,7 +105,7 @@ export function createInitialState(levels = createLevels()) {
     streak: 0,
     dailyClaimed: false,
     adWatches: 0,
-    status: 'playing',
+    status: 'home',
     message: 'Ayni sembolden 2+ tas sec.',
     highlighted: [],
     invalidTiles: [],

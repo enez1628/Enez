@@ -49,7 +49,8 @@ function makeState() {
       ]
     ],
     goals: { leaf: 2 },
-    movesRemaining: 2
+    movesRemaining: 2,
+    status: 'playing'
   };
 }
 
