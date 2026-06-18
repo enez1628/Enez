@@ -4,7 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve:dist": "python3 -m http.server 4174 --directory dist",
     "start": "python3 -m http.server 4173",
-    "test": "node tests/game-engine.test.js"
+    "test": "node tests/game-engine.test.js",
+    "mobile:sync": "npm run build && npx cap sync",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "ios:sync": "npm run build && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0"
   }
 }

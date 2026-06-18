@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Bir Hamle Daha maskable icon">
+  <defs>
+    <linearGradient id="bg" x1="64" x2="448" y1="60" y2="452" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#45bc95"/>
+      <stop offset="1" stop-color="#1f6767"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="394" cy="118" r="84" fill="#fff0ad" opacity=".35"/>
+  <g transform="translate(86 92)">
+    <rect width="140" height="140" rx="42" fill="#5fbdf1"/>
+    <rect x="174" width="140" height="140" rx="42" fill="#ff8ab5"/>
+    <rect y="174" width="140" height="140" rx="42" fill="#a988ff"/>
+    <rect x="174" y="174" width="140" height="140" rx="42" fill="#ffd45f"/>
+    <text x="70" y="89" fill="#fff" font-family="Arial, sans-serif" font-size="54" font-weight="900" text-anchor="middle">SU</text>
+    <text x="244" y="89" fill="#fff" font-family="Arial, sans-serif" font-size="54" font-weight="900" text-anchor="middle">CI</text>
+    <text x="70" y="263" fill="#fff" font-family="Arial, sans-serif" font-size="54" font-weight="900" text-anchor="middle">AY</text>
+    <text x="244" y="263" fill="#fff" font-family="Arial, sans-serif" font-size="54" font-weight="900" text-anchor="middle">GU</text>
+  </g>
+</svg>
