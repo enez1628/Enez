@@ -113,10 +113,20 @@ function setScreen(screen) {
   elements.gameScreen.classList.toggle('active', screen === 'game');
 }
 
+function renderSymbolIcon(symbolId) {
+  return `<span class="symbol-icon icon-${symbolId}" aria-hidden="true"></span>`;
+}
+
 function formatGoals(goals) {
   return Object.entries(goals).map(([symbolId, remaining]) => {
     const symbol = symbolById.get(symbolId);
-    return `<span class="goal-token ${symbol.color}"><b>${symbol.icon}</b><small>${symbol.label}</small> ${Math.max(0, remaining)}</span>`;
+    return `
+      <span class="goal-token ${symbol.color}">
+        ${renderSymbolIcon(symbolId)}
+        <small>${symbol.label}</small>
+        <strong>${Math.max(0, remaining)}</strong>
+      </span>
+    `;
   }).join('');
 }
 
@@ -157,8 +167,7 @@ function renderBoard() {
           data-y="${y}"
           aria-label="${symbol.label} tasi"
         >
-          <span class="tile-code">${tile.locked ? 'K' : symbol.icon}</span>
-          <small>${tile.locked ? 'Kilit' : symbol.label}</small>
+          ${tile.locked ? '<span class="lock-icon" aria-hidden="true"></span>' : renderSymbolIcon(tile.symbol)}
         </button>
       `;
     })
