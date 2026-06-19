@@ -20,6 +20,15 @@ import {
   watchLifeAd
 } from './game-engine.js';
 
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const elements = {
   homeScreen: document.querySelector('#home-screen'),
   gameScreen: document.querySelector('#game-screen'),
@@ -69,11 +78,25 @@ let musicTimer = null;
 let musicEnabled = localStorage.getItem(SOUND_KEY) === 'true' || state.musicEnabled === true;
 let activeHomeTab = 'home';
 
+const VALID_SYMBOL_IDS = new Set(SYMBOLS.map((s) => s.id));
+
 function loadSavedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const saved = JSON.parse(raw);
+    if (typeof saved !== 'object' || saved === null) return null;
+    if (saved.board && Array.isArray(saved.board)) {
+      for (const row of saved.board) {
+        if (!Array.isArray(row)) { localStorage.removeItem(STORAGE_KEY); return null; }
+        for (const tile of row) {
+          if (tile && typeof tile.symbol === 'string' && !VALID_SYMBOL_IDS.has(tile.symbol)) {
+            localStorage.removeItem(STORAGE_KEY);
+            return null;
+          }
+        }
+      }
+    }
     const levels = createLevels(150);
     const level = levels[saved.levelIndex] ?? levels[0];
     const base = createInitialState(levels);
@@ -132,7 +155,8 @@ function setScreen(screen) {
 }
 
 function renderSymbolIcon(symbolId) {
-  return `<span class="symbol-icon icon-${symbolId}" aria-hidden="true"></span>`;
+  const safeId = escapeHTML(symbolId).replace(/[^a-z0-9-]/g, '');
+  return `<span class="symbol-icon icon-${safeId}" aria-hidden="true"></span>`;
 }
 
 function renderProgressBar(progress, target = 100) {
@@ -152,17 +176,19 @@ function renderRewardIcon(type) {
     gift: 'gift',
     piggy: 'piggy'
   };
-  return `<span class="reward-icon reward-${icons[type] ?? type}"></span>`;
+  const safeClass = escapeHTML(icons[type] ?? 'gift').replace(/[^a-z0-9-]/g, '');
+  return `<span class="reward-icon reward-${safeClass}"></span>`;
 }
 
 function formatGoals(goals) {
   return Object.entries(goals).map(([symbolId, remaining]) => {
     const symbol = symbolById.get(symbolId);
+    if (!symbol) return '';
     return `
-      <span class="goal-token ${symbol.color}">
+      <span class="goal-token ${escapeHTML(symbol.color)}">
         ${renderSymbolIcon(symbolId)}
-        <small>${symbol.label}</small>
-        <strong>${Math.max(0, remaining)}</strong>
+        <small>${escapeHTML(symbol.label)}</small>
+        <strong>${Math.max(0, Number(remaining) || 0)}</strong>
       </span>
     `;
   }).join('');
@@ -290,10 +316,10 @@ function renderBoard() {
       const locked = tile.locked ? 'locked' : '';
       return `
         <button
-          class="tile ${symbol.color} ${highlighted} ${invalid} ${locked}"
-          data-x="${x}"
-          data-y="${y}"
-          aria-label="${symbol.label} tasi"
+          class="tile ${escapeHTML(symbol.color)} ${highlighted} ${invalid} ${locked}"
+          data-x="${Number(x)}"
+          data-y="${Number(y)}"
+          aria-label="${escapeHTML(symbol.label)} tasi"
         >
           ${tile.locked ? '<span class="lock-icon" aria-hidden="true"></span>' : renderSymbolIcon(tile.symbol)}
         </button>
