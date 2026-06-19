@@ -347,6 +347,28 @@ h1 {
   gap: 10px;
 }
 
+.claim-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 22px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ffad65, #7b56f2);
+  box-shadow: 0 14px 30px rgba(74, 40, 189, 0.2), inset 0 -4px 0 rgba(0, 0, 0, 0.14);
+}
+
+.claim-banner strong,
+.claim-banner span {
+  display: block;
+}
+
+.claim-banner span {
+  font-size: 0.82rem;
+  font-weight: 800;
+  opacity: 0.92;
+}
+
 .track-card {
   display: grid;
   gap: 6px;

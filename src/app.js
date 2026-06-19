@@ -202,8 +202,15 @@ function renderMetaPanel() {
 
   if (activeHomeTab === 'rewards') {
     const tracks = state.meta.tracks;
+    const claimed = state.meta.lastClaimedReward;
     elements.metaPanel.innerHTML = `
       <div class="meta-header"><span class="label">Odul Merkezi</span><strong>Bir bolum daha, bir odul daha</strong></div>
+      ${claimed ? `
+        <div class="claim-banner">
+          ${renderRewardIcon('gold')}
+          <div><strong>Yeni odul alindi</strong><span>+${claimed.gold} altin, +${claimed.stars} yildiz</span></div>
+        </div>
+      ` : ''}
       <div class="reward-grid">
         ${renderTrackCard('Seviye Kutusu', 'chest', tracks.levelChest)}
         ${renderTrackCard('Ucretsiz Odul', 'gift', tracks.freeGift)}
