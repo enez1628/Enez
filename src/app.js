@@ -1,6 +1,7 @@
 import {
   SYMBOLS,
   symbolById,
+  abandonLevel,
   applyMove,
   claimDailyReward,
   claimPendingReward,
@@ -169,10 +170,13 @@ function formatGoals(goals) {
 }
 
 function renderLevelStrip() {
-  elements.levelStrip.innerHTML = state.levels.slice(0, 24).map((level, index) => {
-    const active = index === state.levelIndex ? 'active' : '';
-    const done = index < state.levelIndex ? 'done' : '';
-    return `<button class="level-node ${active} ${done}" data-level="${index}"><span>${level.id}</span><small>${level.band}</small></button>`;
+  const start = Math.max(0, state.levelIndex - 11);
+  const end = Math.min(state.levels.length, start + 24);
+  elements.levelStrip.innerHTML = state.levels.slice(start, end).map((level, index) => {
+    const realIndex = start + index;
+    const active = realIndex === state.levelIndex ? 'active' : '';
+    const done = realIndex < state.levelIndex ? 'done' : '';
+    return `<button class="level-node ${active} ${done}" data-level="${realIndex}"><span>${level.id}</span><small>${level.band}</small></button>`;
   }).join('');
 }
 
@@ -180,8 +184,9 @@ function renderHome() {
   elements.homeLives.textContent = state.lives;
   elements.homeGold.textContent = state.gold;
   elements.homeStreak.textContent = state.streak;
-  elements.dailyStreak.textContent = state.dailyClaimed ? 'Bugunku odul alindi' : '1. gun odulu hazir';
-  elements.claimDaily.disabled = state.dailyClaimed;
+  const dailyAlreadyClaimed = state.dailyClaimedDate === new Date().toDateString();
+  elements.dailyStreak.textContent = dailyAlreadyClaimed ? 'Bugunku odul alindi' : '1. gun odulu hazir';
+  elements.claimDaily.disabled = dailyAlreadyClaimed;
   elements.playButton.disabled = state.lives <= 0;
   elements.continueButton.classList.toggle('hidden', state.status !== 'playing');
   elements.watchLifeAd.disabled = state.lives >= 5;
@@ -386,7 +391,7 @@ function openLostModal() {
         }
       },
       {
-        label: '120 Altin Harca +5 Hamle',
+        label: '120 Altin Harca +5 Hamle +30 sn',
         variant: 'secondary-button',
         disabled: state.gold < 120,
         onClick: () => {
@@ -542,7 +547,9 @@ elements.continueButton.addEventListener('click', () => {
 });
 
 elements.backHome.addEventListener('click', () => {
-  state = { ...state, status: 'home' };
+  if (state.status === 'playing') {
+    state = abandonLevel(state);
+  }
   hideModal();
   setScreen('home');
   render();

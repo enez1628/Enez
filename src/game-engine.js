@@ -131,7 +131,7 @@ export function createInitialState(levels = createLevels()) {
     meta: createMetaState(),
     pendingReward: null,
     streak: 0,
-    dailyClaimed: false,
+    dailyClaimedDate: null,
     adWatches: 0,
     status: 'home',
     message: 'Ayni sembolden 2+ tas sec.',
@@ -477,6 +477,18 @@ export function quitLevel(state) {
   };
 }
 
+export function abandonLevel(state) {
+  if (state.status !== 'playing') return state;
+
+  return {
+    ...state,
+    status: 'home',
+    lives: Math.max(0, state.lives - 1),
+    streak: 0,
+    message: 'Bolumden cikildi. 1 can harcandi.'
+  };
+}
+
 export function startLevel(state, levelIndex = state.levelIndex) {
   const level = state.levels[levelIndex];
   const random = createSeededRandom(level.seed + state.adWatches + state.streak);
@@ -505,11 +517,12 @@ export function nextLevel(state) {
 }
 
 export function claimDailyReward(state) {
-  if (state.dailyClaimed) return state;
+  const today = new Date().toDateString();
+  if (state.dailyClaimedDate === today) return state;
 
   return {
     ...state,
-    dailyClaimed: true,
+    dailyClaimedDate: today,
     gold: state.gold + 75,
     boosters: {
       ...state.boosters,

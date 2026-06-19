@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  abandonLevel,
   applyMove,
   claimDailyReward,
   claimPendingReward,
@@ -168,9 +169,23 @@ function alwaysLeaf() {
 {
   const state = claimDailyReward(makeState());
 
-  assert.equal(state.dailyClaimed, true);
+  assert.equal(state.dailyClaimedDate, new Date().toDateString());
   assert.equal(state.gold, 325);
   assert.equal(state.boosters.hint, 4);
+}
+
+{
+  const state = claimDailyReward(claimDailyReward(makeState()));
+
+  assert.equal(state.gold, 325);
+}
+
+{
+  const state = abandonLevel(makeState());
+
+  assert.equal(state.status, 'home');
+  assert.equal(state.lives, 4);
+  assert.equal(state.streak, 0);
 }
 
 {
