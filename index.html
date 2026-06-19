@@ -2,47 +2,144 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Melike ve Enez</title>
-  <style>
-    body {
-      background-color: #fff0f5;
-      font-family: 'Segoe UI', sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    h1 {
-      color: #e60073;
-      font-size: 3em;
-    }
-    p {
-      font-size: 1.4em;
-      color: #333;
-      max-width: 600px;
-      margin: auto;
-    }
-    img {
-      width: 90%;
-      max-width: 500px;
-      margin: 20px auto;
-      border-radius: 10px;
-    }
-    audio {
-      margin-top: 30px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#4f8f87" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Bir Hamle Daha" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Bir Hamle Daha</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/icon-180.png" />
+  <link rel="stylesheet" href="src/styles.css" />
 </head>
 <body>
-  <h1>💖 Melike & Enez 💖</h1>
-  <p>Sen bu dünyaya gönderilmiş en güzel mucizesin...<br>
-     Her sabah seninle uyanmak yeniden doğmak gibi...<br>
-     Enez seni her şeyinle, sonsuz seviyor...</p>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <main class="phone-shell" aria-label="Bir Hamle Daha mobil oyun prototipi">
+    <section id="home-screen" class="screen active">
+      <div class="hero-card">
+        <div class="hero-content">
+          <p class="eyebrow">Sakin ama hirs yaptiran puzzle</p>
+          <h1>Bir Hamle Daha</h1>
+          <p class="hero-copy">Eslesen taslari temizle, hedefleri bitir, hamlen biterse reklam izleyip devam et.</p>
+        </div>
+        <div class="hero-preview" aria-hidden="true">
+          <span class="preview-tile blue"><span class="symbol-icon icon-drop"></span></span>
+          <span class="preview-tile yellow"><span class="symbol-icon icon-sun"></span></span>
+          <span class="preview-tile pink"><span class="symbol-icon icon-flower"></span></span>
+          <span class="preview-tile purple"><span class="symbol-icon icon-moon"></span></span>
+          <span class="preview-tile green"><span class="symbol-icon icon-leaf"></span></span>
+          <span class="preview-tile orange"><span class="symbol-icon icon-star"></span></span>
+        </div>
+        <div class="feature-row" aria-label="Oyun ozellikleri">
+          <span>150 Bolum</span>
+          <span>Odullu Reklam</span>
+          <span>Sureli Rekabet</span>
+          <span>Gunluk Odul</span>
+        </div>
+      </div>
 
-  <img src="https://i.hizliresim.com/cvvp0po.jpeg" alt="Melike ve Enez"/>
+      <div class="stats-grid" aria-label="Oyuncu bilgileri">
+        <article>
+          <span>Can</span>
+          <strong id="home-lives">5</strong>
+          <small>Hazir</small>
+        </article>
+        <article>
+          <span>Altin</span>
+          <strong id="home-gold">250</strong>
+          <small>Harcanir</small>
+        </article>
+        <article>
+          <span>Seri</span>
+          <strong id="home-streak">0</strong>
+          <small>Rekor</small>
+        </article>
+      </div>
 
-  <audio controls autoplay loop>
-    <source src="https://dl.sndup.net/3s9n/Ahmet_Kaya_Siir.mp3" type="audio/mp3">
-    Tarayıcınız müzik çalmayı desteklemiyor.
-  </audio>
+      <div class="daily-card">
+        <div>
+          <span class="label">Gunluk Seri</span>
+          <strong id="daily-streak">1. gun odulu hazir</strong>
+          <p>Bugun giris odulu: 75 altin + 1 ipucu.</p>
+        </div>
+        <button id="claim-daily" class="secondary-button">Odul Al</button>
+      </div>
+
+      <button id="play-button" class="primary-button">Oyna</button>
+      <button id="continue-button" class="secondary-button hidden">Kaldigin Yerden Devam Et</button>
+      <button id="watch-life-ad" class="ghost-button">Reklam Izle +1 Can</button>
+
+      <section id="meta-panel" class="meta-panel hidden" aria-label="Oyun ilerleme paneli"></section>
+
+      <section id="level-card" class="level-card">
+        <div class="section-heading">
+          <span class="label">Seviye Yolu</span>
+          <strong>150 Bolumluk Yol</strong>
+        </div>
+        <div class="level-strip" id="level-strip" aria-label="Seviye yolu"></div>
+      </section>
+
+      <nav class="home-nav" aria-label="Ana ekran menusu">
+        <button class="home-nav-button active" data-tab="home">Ana Sayfa</button>
+        <button class="home-nav-button" data-tab="rewards">Oduller</button>
+        <button class="home-nav-button" data-tab="quests">Gorevler</button>
+        <button class="home-nav-button" data-tab="shop">Magaza</button>
+      </nav>
+    </section>
+
+    <section id="game-screen" class="screen">
+      <header class="top-bar">
+        <button id="back-home" class="icon-button" aria-label="Ana menuye don">‹</button>
+        <div>
+          <span id="level-label">Bolum 1</span>
+          <strong id="move-label">Hamle: 12</strong>
+        </div>
+        <div class="timer-pill urgent-safe" aria-label="Sure"><span>Sure</span><strong id="timer-label">02:00</strong></div>
+        <div class="coin-pill" aria-label="Altin"><span>Altin</span><strong id="gold-label">250</strong></div>
+      </header>
+
+      <section class="goal-card" aria-label="Bolum hedefleri">
+        <div>
+          <span class="label">Gorevler</span>
+          <strong id="difficulty-label" class="difficulty-label">Kolay</strong>
+          <div id="goal-list" class="goal-list"></div>
+        </div>
+        <div class="score-pill">
+          <span>Puan</span>
+          <strong id="score-label">0</strong>
+        </div>
+      </section>
+
+      <div id="message" class="message" role="status">Ayni sembolden 2+ tas sec.</div>
+      <div id="board" class="board" aria-label="Puzzle tahtasi"></div>
+
+      <footer class="boosters" aria-label="Guc butonlari">
+        <button id="hint-button"><span class="booster-icon">?</span><span>Ipucu</span><strong id="hint-count">3</strong></button>
+        <button id="shuffle-button"><span class="booster-icon">~</span><span>Karistir</span><strong id="shuffle-count">2</strong></button>
+        <button id="undo-button"><span class="booster-icon">&lt;</span><span>Geri Al</span><strong id="undo-count">2</strong></button>
+        <button id="sound-button"><span class="booster-icon">♪</span><span>Muzik</span><strong id="sound-label">Kapali</strong></button>
+      </footer>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <span id="modal-badge" class="modal-badge">Son Hamle Analizi</span>
+      <h2 id="modal-title">Cok az kaldi!</h2>
+      <div id="modal-copy" class="modal-copy">5 hamle ile devam edebilirsin.</div>
+      <div id="modal-actions" class="modal-actions"></div>
+    </div>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
 </body>
 </html>

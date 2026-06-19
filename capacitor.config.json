@@ -1,0 +1,9 @@
+{
+  "appId": "com.birhamledaha.game",
+  "appName": "Bir Hamle Daha",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

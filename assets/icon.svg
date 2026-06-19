@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Bir Hamle Daha icon">
+  <defs>
+    <linearGradient id="bg" x1="80" x2="432" y1="70" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38aa83"/>
+      <stop offset="1" stop-color="#23756f"/>
+    </linearGradient>
+    <linearGradient id="tile" x1="155" x2="355" y1="135" y2="365" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd45f"/>
+      <stop offset="1" stop-color="#ef9d2f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="390" cy="116" r="68" fill="#fff2b8" opacity=".42"/>
+  <rect x="122" y="118" width="116" height="116" rx="34" fill="#5fbdf1"/>
+  <rect x="274" y="118" width="116" height="116" rx="34" fill="#ff8ab5"/>
+  <rect x="122" y="278" width="116" height="116" rx="34" fill="#a988ff"/>
+  <rect x="274" y="278" width="116" height="116" rx="34" fill="url(#tile)"/>
+  <path fill="#fff" d="M184 168h35v18h-16v58h-20v-58h-16v-18h17Zm149 29c-23 0-41 17-41 39s18 39 41 39c13 0 25-5 33-14l-14-13c-5 5-11 8-19 8-12 0-21-9-21-20s9-20 21-20c8 0 14 3 19 8l14-13c-8-9-20-14-33-14Zm-154 133 15-39h22l15 39h-20l-2-7h-27l-2 7h-21Zm15-21h14l-7-20-7 20Zm129-20h-18v59h18v-20h9c21 0 33-11 33-30 0-18-12-29-33-29h-9v20h8c8 0 13 3 13 10s-5 11-13 11h-8v-21Z"/>
+</svg>
