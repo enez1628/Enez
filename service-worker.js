@@ -1,10 +1,11 @@
-const CACHE_NAME = 'bir-hamle-daha-v6';
+const CACHE_NAME = 'bir-hamle-daha-v7';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './src/app.js',
   './src/game-engine.js',
+  './src/utils.js',
   './src/styles.css',
   './assets/icon-180.png',
   './assets/icon-192.png',

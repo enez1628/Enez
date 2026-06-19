@@ -1,3 +1,13 @@
+import {
+  advanceProgress,
+  updateQuests,
+  decrementBooster,
+  incrementBooster,
+  isOutOfResources,
+  makeLostState,
+  addContinueResources
+} from './utils.js';
+
 export const SYMBOLS = [
   { id: 'leaf', icon: 'YA', label: 'Yaprak', color: 'green' },
   { id: 'sun', icon: 'GU', label: 'Gunes', color: 'yellow' },
@@ -172,19 +182,7 @@ export function createRewardBundle(state, stars) {
   };
 }
 
-function addProgress(track, amount) {
-  return {
-    ...track,
-    progress: Math.min(track.target, track.progress + amount)
-  };
-}
-
-function advanceQuest(quest, amount) {
-  return {
-    ...quest,
-    progress: Math.min(quest.target, quest.progress + amount)
-  };
-}
+const addProgress = advanceProgress;
 
 export function claimPendingReward(state, multiplier = 1) {
   if (!state.pendingReward) return state;
@@ -234,11 +232,7 @@ export function claimPendingReward(state, multiplier = 1) {
           coins: tracks.piggyBank.coins + boostedGold
         }
       },
-      quests: state.meta.quests.map((quest) => {
-        if (quest.id === 'stars') return advanceQuest(quest, boostedStars);
-        if (quest.id === 'levels') return advanceQuest(quest, 1);
-        return quest;
-      })
+      quests: updateQuests(updateQuests(state.meta.quests, 'stars', boostedStars), 'levels', 1)
     },
     message: `${boostedGold} altin ve ${boostedStars} yildiz alindi.`
   };
@@ -366,12 +360,8 @@ export function applyMove(state, x, y, random = Math.random) {
       message: 'Yanlis hamle! -1 hamle, -5 sn, -25 puan.'
     };
 
-    if (nextState.movesRemaining === 0 || nextState.timeRemaining === 0) {
-      return {
-        ...nextState,
-        status: 'lost',
-        message: 'Yanlis hamle pahaliya patladi. Reklam izleyip devam edebilirsin.'
-      };
+    if (isOutOfResources(nextState)) {
+      return makeLostState(nextState, 'Yanlis hamle pahaliya patladi. Reklam izleyip devam edebilirsin.');
     }
 
     return nextState;
@@ -424,14 +414,10 @@ export function applyMove(state, x, y, random = Math.random) {
     };
   }
 
-  if (nextState.movesRemaining === 0 || nextState.timeRemaining === 0) {
-    return {
-      ...nextState,
-      status: 'lost',
-      message: nextState.timeRemaining === 0
-        ? 'Sure bitti! Reklam izleyip devam edebilirsin.'
-        : 'Cok az kaldi! Reklam izleyip +5 hamle alabilirsin.'
-    };
+  if (isOutOfResources(nextState)) {
+    return makeLostState(nextState, nextState.timeRemaining === 0
+      ? 'Sure bitti! Reklam izleyip devam edebilirsin.'
+      : 'Cok az kaldi! Reklam izleyip +5 hamle alabilirsin.');
   }
 
   return nextState;
@@ -441,12 +427,8 @@ export function continueWithAd(state) {
   if (state.status !== 'lost') return state;
 
   return {
-    ...state,
-    status: 'playing',
-    movesRemaining: state.movesRemaining + 5,
-    timeRemaining: state.timeRemaining + 30,
+    ...addContinueResources(state),
     adWatches: state.adWatches + 1,
-    invalidTiles: [],
     message: 'Reklam odulu geldi: +5 hamle ve +30 sn.'
   };
 }
@@ -455,12 +437,8 @@ export function continueWithGold(state, cost = 120) {
   if (state.status !== 'lost' || state.gold < cost) return state;
 
   return {
-    ...state,
-    status: 'playing',
-    movesRemaining: state.movesRemaining + 5,
-    timeRemaining: state.timeRemaining + 30,
+    ...addContinueResources(state),
     gold: state.gold - cost,
-    invalidTiles: [],
     message: 'Altin ile +5 hamle ve +30 sn alindi.'
   };
 }
@@ -511,10 +489,7 @@ export function claimDailyReward(state) {
     ...state,
     dailyClaimed: true,
     gold: state.gold + 75,
-    boosters: {
-      ...state.boosters,
-      hint: state.boosters.hint + 1
-    },
+    boosters: incrementBooster(state.boosters, 'hint'),
     message: 'Gunluk odul: 75 altin ve 1 ipucu.'
   };
 }
@@ -547,10 +522,10 @@ export function useHint(state) {
 
   return {
     ...state,
-    boosters: { ...state.boosters, hint: state.boosters.hint - 1 },
+    boosters: decrementBooster(state.boosters, 'hint'),
     meta: {
       ...state.meta,
-      quests: state.meta.quests.map((quest) => quest.id === 'mistakeFree' ? advanceQuest(quest, 1) : quest)
+      quests: updateQuests(state.meta.quests, 'mistakeFree', 1)
     },
     highlighted: best.map((item) => `${item.x},${item.y}`),
     message: best.length > 0 ? `${best.length} taslik iyi hamle isaretlendi.` : 'Uygun hamle bulunamadi.'
@@ -563,10 +538,10 @@ export function useShuffle(state, random = Math.random) {
 
   return {
     ...pushHistory(cloneState(state)),
-    boosters: { ...state.boosters, shuffle: state.boosters.shuffle - 1 },
+    boosters: decrementBooster(state.boosters, 'shuffle'),
     meta: {
       ...state.meta,
-      quests: state.meta.quests.map((quest) => quest.id === 'mistakeFree' ? advanceQuest(quest, 1) : quest)
+      quests: updateQuests(state.meta.quests, 'mistakeFree', 1)
     },
     board: generateBoard(level, random),
     highlighted: [],
@@ -585,7 +560,7 @@ export function useUndo(state) {
     movesRemaining: previous.movesRemaining,
     timeRemaining: previous.timeRemaining,
     score: previous.score,
-    boosters: { ...state.boosters, undo: state.boosters.undo - 1 },
+    boosters: decrementBooster(state.boosters, 'undo'),
     highlighted: [],
     invalidTiles: [],
     history: state.history.slice(0, -1),
@@ -604,11 +579,7 @@ export function tickTimer(state, seconds = 1) {
   };
 
   if (timeRemaining === 0) {
-    return {
-      ...nextState,
-      status: 'lost',
-      message: 'Sure bitti! Reklam izleyip +5 hamle ve +30 sn alabilirsin.'
-    };
+    return makeLostState(nextState, 'Sure bitti! Reklam izleyip +5 hamle ve +30 sn alabilirsin.');
   }
 
   return nextState;
