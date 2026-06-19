@@ -571,6 +571,63 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   box-shadow: inset 0 -3px 0 rgba(0,0,0,0.12);
 }
 
+/* ===== SHOP AD SECTION ===== */
+.shop-ad-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ad-reward-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #6c5ce7, #4834d4);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.15), 0 4px 12px rgba(108,92,231,0.3);
+  transition: transform 0.12s;
+}
+
+.ad-reward-btn:active:not(:disabled) { transform: scale(0.95); }
+
+.ad-reward-btn .ad-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.ad-reward-btn strong {
+  font-size: 0.9rem;
+  color: var(--gold);
+}
+
+.shop-card.purchased {
+  opacity: 0.6;
+  border-color: var(--green);
+}
+
+.pass-active-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.8rem;
+}
+
 /* ===== QUEST SYSTEM ===== */
 .quest-panel { display: grid; gap: 12px; }
 

@@ -99,7 +99,8 @@ export function getShopPackages() {
       gold: 900,
       livesMinutes: 15,
       boosters: { hint: 1, shuffle: 1, undo: 1, dice: 1 },
-      price: '$0.00',
+      price: '₺29.99',
+      priceValue: 29.99,
       featured: false
     },
     {
@@ -108,7 +109,8 @@ export function getShopPackages() {
       gold: 17500,
       livesMinutes: 60,
       boosters: { hint: 3, shuffle: 3, undo: 3, dice: 3 },
-      price: '$0.00',
+      price: '₺69.99',
+      priceValue: 69.99,
       featured: true,
       badge: 'En Cok Tercih'
     },
@@ -118,8 +120,21 @@ export function getShopPackages() {
       gold: 3500,
       livesMinutes: 0,
       boosters: {},
-      price: '$0.00',
+      price: '₺129.99',
+      priceValue: 129.99,
       featured: false
+    },
+    {
+      id: 'removeAds',
+      name: 'Reklamlari Kaldir',
+      gold: 500,
+      livesMinutes: 30,
+      boosters: { hint: 2, shuffle: 2, undo: 2 },
+      price: '₺49.99',
+      priceValue: 49.99,
+      featured: false,
+      badge: 'Tek Seferlik',
+      removeAds: true
     }
   ];
 }
@@ -129,6 +144,9 @@ export function purchasePackage(state, packageId) {
   const pkg = packages.find((p) => p.id === packageId);
   if (!pkg) return state;
 
+  const shopPurchased = [...(state.shopPurchased ?? [])];
+  if (!shopPurchased.includes(packageId)) shopPurchased.push(packageId);
+
   return {
     ...state,
     gold: state.gold + pkg.gold,
@@ -137,8 +155,49 @@ export function purchasePackage(state, packageId) {
       shuffle: state.boosters.shuffle + (pkg.boosters.shuffle ?? 0),
       undo: state.boosters.undo + (pkg.boosters.undo ?? 0)
     },
+    adsRemoved: state.adsRemoved || Boolean(pkg.removeAds),
+    shopPurchased,
     message: `${pkg.name} satin alindi!`
   };
+}
+
+export function purchaseBattlePass(state) {
+  if (state.meta.battlePass.active) return state;
+
+  return {
+    ...state,
+    meta: {
+      ...state.meta,
+      battlePass: {
+        ...state.meta.battlePass,
+        active: true
+      }
+    },
+    message: 'Eslestirme Pas aktif edildi!'
+  };
+}
+
+export function watchAdForGold(state) {
+  return {
+    ...state,
+    gold: state.gold + 50,
+    adWatches: state.adWatches + 1,
+    message: 'Reklam odulu geldi: +50 altin.'
+  };
+}
+
+export function shouldShowInterstitial(state) {
+  if (state.adsRemoved) return false;
+  const completedLevels = state.levelIndex;
+  return completedLevels > 0 && completedLevels % 3 === 0;
+}
+
+export function getGoldPackages() {
+  return [
+    { id: 'gold_small', gold: 500, price: '₺14.99', priceValue: 14.99 },
+    { id: 'gold_medium', gold: 1500, price: '₺34.99', priceValue: 34.99, badge: 'Populer' },
+    { id: 'gold_large', gold: 5000, price: '₺89.99', priceValue: 89.99, badge: 'En Degerli' }
+  ];
 }
 
 export function buildVillageBuilding(state, buildingId) {
@@ -339,6 +398,8 @@ export function createInitialState(levels = createLevels()) {
     streak: 0,
     dailyClaimedDate: null,
     adWatches: 0,
+    adsRemoved: false,
+    shopPurchased: [],
     status: 'home',
     message: 'Ayni sembolden 2+ tas sec.',
     highlighted: [],

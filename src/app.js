@@ -12,10 +12,14 @@ import {
   findGroup,
   getCurrentLevel,
   getShopPackages,
+  getGoldPackages,
   purchasePackage,
+  purchaseBattlePass,
   buildVillageBuilding,
   spinDailyWheel,
   claimQuestReward,
+  shouldShowInterstitial,
+  watchAdForGold,
   nextLevel,
   quitLevel,
   startLevel,
@@ -247,14 +251,19 @@ function renderMetaPanel() {
 
 function renderShop() {
   const packages = getShopPackages();
+  const goldPackages = getGoldPackages();
+  const alreadyRemovedAds = state.adsRemoved;
+
   elements.metaPanel.innerHTML = `
     <div class="meta-header">
       <span class="label">MAGAZA</span>
       <strong>Ozel Paketler</strong>
     </div>
     <div class="shop-list">
-      ${packages.map((pkg) => `
-        <article class="shop-card ${pkg.featured ? 'featured' : ''}">
+      ${packages.map((pkg) => {
+        const purchased = pkg.removeAds && alreadyRemovedAds;
+        return `
+        <article class="shop-card ${pkg.featured ? 'featured' : ''} ${purchased ? 'purchased' : ''}">
           ${pkg.badge ? `<span class="shop-card-badge">${pkg.badge}</span>` : ''}
           <div class="shop-card-header">
             <strong>${pkg.name}</strong>
@@ -265,19 +274,160 @@ function renderShop() {
             ${Object.entries(pkg.boosters).map(([key, val]) =>
               val ? `<span class="shop-item">${renderRewardIcon(key)} x${val}</span>` : ''
             ).join('')}
+            ${pkg.removeAds ? `<span class="shop-item" style="color:#4CAF50;font-weight:800">Reklam yok!</span>` : ''}
           </div>
-          <button class="price-button" data-package="${pkg.id}">${pkg.price}</button>
+          <button class="price-button" data-package="${pkg.id}" ${purchased ? 'disabled' : ''}>${purchased ? 'Satin Alindi' : pkg.price}</button>
+        </article>
+        `;
+      }).join('')}
+    </div>
+
+    <div class="meta-header" style="margin-top:16px">
+      <span class="label">ALTIN</span>
+      <strong>Altin Paketleri</strong>
+    </div>
+    <div class="shop-list">
+      ${goldPackages.map((pkg) => `
+        <article class="shop-card ${pkg.badge ? 'featured' : ''}">
+          ${pkg.badge ? `<span class="shop-card-badge">${pkg.badge}</span>` : ''}
+          <div class="shop-card-header">
+            <strong>${renderRewardIcon('gold')} ${pkg.gold.toLocaleString()} Altin</strong>
+          </div>
+          <button class="price-button" data-gold-package="${pkg.id}">${pkg.price}</button>
         </article>
       `).join('')}
     </div>
+
+    <div class="meta-header" style="margin-top:16px">
+      <span class="label">UCRETSIZ</span>
+      <strong>Reklam Izle</strong>
+    </div>
+    <div class="shop-ad-section">
+      <button class="ad-reward-btn" id="ad-gold-btn">
+        <span class="ad-icon">▶</span>
+        <span>Reklam Izle</span>
+        <strong>+50 Altin</strong>
+      </button>
+      <button class="ad-reward-btn" id="ad-life-btn" ${state.lives >= 5 ? 'disabled' : ''}>
+        <span class="ad-icon">▶</span>
+        <span>Reklam Izle</span>
+        <strong>+1 Can</strong>
+      </button>
+    </div>
+
     <button class="shop-restore-btn">Geri Yukle</button>
   `;
 
   elements.metaPanel.querySelectorAll('[data-package]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      state = purchasePackage(state, btn.dataset.package);
-      render();
+      const pkgId = btn.dataset.package;
+      showPurchaseConfirm(pkgId, 'package');
     });
+  });
+
+  elements.metaPanel.querySelectorAll('[data-gold-package]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pkgId = btn.dataset.goldPackage;
+      showPurchaseConfirm(pkgId, 'gold');
+    });
+  });
+
+  const adGoldBtn = elements.metaPanel.querySelector('#ad-gold-btn');
+  if (adGoldBtn) {
+    adGoldBtn.addEventListener('click', () => simulateRewardedAd(() => {
+      state = watchAdForGold(state);
+      render();
+    }));
+  }
+
+  const adLifeBtn = elements.metaPanel.querySelector('#ad-life-btn');
+  if (adLifeBtn) {
+    adLifeBtn.addEventListener('click', () => simulateRewardedAd(() => {
+      state = watchLifeAd(state);
+      render();
+    }));
+  }
+}
+
+function simulateRewardedAd(onComplete) {
+  showModal({
+    badge: 'Reklam',
+    title: 'Reklam Izleniyor...',
+    copy: 'Lutfen bekleyin... 3',
+    actions: []
+  });
+
+  let count = 2;
+  const timer = window.setInterval(() => {
+    if (count === 0) {
+      window.clearInterval(timer);
+      hideModal();
+      onComplete();
+      return;
+    }
+    elements.modalCopy.textContent = `Lutfen bekleyin... ${count}`;
+    count -= 1;
+  }, 800);
+}
+
+function simulateInterstitialAd(onComplete) {
+  if (state.adsRemoved) {
+    onComplete();
+    return;
+  }
+
+  showModal({
+    badge: 'Reklam',
+    title: 'Ara Reklam',
+    copy: '3 saniye sonra kapanacak...',
+    actions: []
+  });
+
+  let count = 2;
+  const timer = window.setInterval(() => {
+    if (count === 0) {
+      window.clearInterval(timer);
+      hideModal();
+      onComplete();
+      return;
+    }
+    elements.modalCopy.textContent = `${count} saniye sonra kapanacak...`;
+    count -= 1;
+  }, 1000);
+}
+
+function showPurchaseConfirm(pkgId, type) {
+  let pkg;
+  if (type === 'package') {
+    pkg = getShopPackages().find((p) => p.id === pkgId);
+  } else {
+    pkg = getGoldPackages().find((p) => p.id === pkgId);
+  }
+  if (!pkg) return;
+
+  showModal({
+    badge: 'Satin Al',
+    title: pkg.name ?? `${pkg.gold.toLocaleString()} Altin`,
+    copy: `${pkg.price} odeyerek satin almak istiyor musunuz?`,
+    actions: [
+      {
+        label: `Satin Al (${pkg.price})`,
+        onClick: () => {
+          if (type === 'package') {
+            state = purchasePackage(state, pkgId);
+          } else {
+            state = { ...state, gold: state.gold + pkg.gold, message: `${pkg.gold} altin satin alindi!` };
+          }
+          hideModal();
+          render();
+        }
+      },
+      {
+        label: 'Vazgec',
+        variant: 'ghost-button',
+        onClick: () => hideModal()
+      }
+    ]
   });
 }
 
@@ -560,7 +710,7 @@ function openOverlay(type) {
               <strong>${bp.progress}/${bp.target}</strong>
             </div>
           </div>
-          ${!bp.active ? `<button class="pass-activate-btn" id="activate-pass" style="margin-top:8px">Etkinlestir</button>` : ''}
+          ${!bp.active ? `<button class="pass-activate-btn" id="activate-pass" style="margin-top:8px">\u20ba39.99 - Etkinlestir</button>` : '<span class="pass-active-badge">Aktif</span>'}
         </div>
         <div style="display:grid;gap:8px">
           ${bp.freeTier.map((item, i) => `
@@ -584,6 +734,33 @@ function openOverlay(type) {
         </div>
       </div>
     `;
+
+    const activateBtn = document.querySelector('#activate-pass');
+    if (activateBtn) {
+      activateBtn.addEventListener('click', () => {
+        showModal({
+          badge: 'Battle Pass',
+          title: 'Eslestirme Pas',
+          copy: '\u20ba39.99 odeyerek premium oduller acilacak. Satin almak istiyor musunuz?',
+          actions: [
+            {
+              label: 'Satin Al (\u20ba39.99)',
+              onClick: () => {
+                state = purchaseBattlePass(state);
+                hideModal();
+                closeOverlay();
+                render();
+              }
+            },
+            {
+              label: 'Vazgec',
+              variant: 'ghost-button',
+              onClick: () => hideModal()
+            }
+          ]
+        });
+      });
+    }
     return;
   }
 
@@ -764,6 +941,17 @@ function openWinModal() {
     render();
     return;
   }
+
+  // Show interstitial ad every 3 levels (if ads not removed)
+  if (shouldShowInterstitial(state)) {
+    simulateInterstitialAd(() => showWinRewardModal(stars, reward));
+    return;
+  }
+
+  showWinRewardModal(stars, reward);
+}
+
+function showWinRewardModal(stars, reward) {
 
   showModal({
     badge: 'Odul',
