@@ -11,6 +11,11 @@ import {
   createLevels,
   findGroup,
   getCurrentLevel,
+  getShopPackages,
+  purchasePackage,
+  buildVillageBuilding,
+  spinDailyWheel,
+  claimQuestReward,
   nextLevel,
   quitLevel,
   startLevel,
@@ -26,16 +31,18 @@ const elements = {
   gameScreen: document.querySelector('#game-screen'),
   homeLives: document.querySelector('#home-lives'),
   homeGold: document.querySelector('#home-gold'),
-  homeStreak: document.querySelector('#home-streak'),
-  dailyStreak: document.querySelector('#daily-streak'),
-  claimDaily: document.querySelector('#claim-daily'),
+  homeStars: document.querySelector('#home-stars'),
+  livesTimer: document.querySelector('#lives-timer'),
+  homeMainContent: document.querySelector('#home-main-content'),
+  islandView: document.querySelector('#island-view'),
+  xpFill: document.querySelector('#xp-fill'),
+  xpLabel: document.querySelector('#xp-label'),
+  eventTimerLabel: document.querySelector('#event-timer-label'),
+  levelNumber: document.querySelector('#level-number'),
   playButton: document.querySelector('#play-button'),
   continueButton: document.querySelector('#continue-button'),
-  watchLifeAd: document.querySelector('#watch-life-ad'),
-  levelStrip: document.querySelector('#level-strip'),
-  levelCard: document.querySelector('#level-card'),
   metaPanel: document.querySelector('#meta-panel'),
-  homeNavButtons: document.querySelectorAll('.home-nav-button'),
+  navTabs: document.querySelectorAll('.nav-tab'),
   backHome: document.querySelector('#back-home'),
   levelLabel: document.querySelector('#level-label'),
   moveLabel: document.querySelector('#move-label'),
@@ -58,7 +65,10 @@ const elements = {
   modalBadge: document.querySelector('#modal-badge'),
   modalTitle: document.querySelector('#modal-title'),
   modalCopy: document.querySelector('#modal-copy'),
-  modalActions: document.querySelector('#modal-actions')
+  modalActions: document.querySelector('#modal-actions'),
+  overlayPanel: document.querySelector('#overlay-panel'),
+  overlayBody: document.querySelector('#overlay-body'),
+  overlayClose: document.querySelector('#overlay-close')
 };
 
 const STORAGE_KEY = 'bir-hamle-daha-save-v2';
@@ -88,6 +98,12 @@ function loadSavedState() {
         matchPass: { ...base.meta.tracks.matchPass, ...(saved.meta?.tracks?.matchPass ?? {}) },
         piggyBank: { ...base.meta.tracks.piggyBank, ...(saved.meta?.tracks?.piggyBank ?? {}) }
       },
+      village: { ...base.meta.village, ...(saved.meta?.village ?? {}), buildings: saved.meta?.village?.buildings ?? base.meta.village.buildings },
+      matchEvent: { ...base.meta.matchEvent, ...(saved.meta?.matchEvent ?? {}) },
+      battlePass: { ...base.meta.battlePass, ...(saved.meta?.battlePass ?? {}) },
+      dailySpin: { ...base.meta.dailySpin, ...(saved.meta?.dailySpin ?? {}) },
+      treasureIsland: { ...base.meta.treasureIsland, ...(saved.meta?.treasureIsland ?? {}) },
+      beeRace: { ...base.meta.beeRace, ...(saved.meta?.beeRace ?? {}) },
       quests: saved.meta?.quests ?? base.meta.quests
     };
 
@@ -127,6 +143,16 @@ function formatTime(totalSeconds) {
   return `${minutes}:${seconds}`;
 }
 
+function formatCountdown(ms) {
+  if (ms <= 0) return '0s';
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  if (days > 0) return `${days}g ${String(hours).padStart(2, '0')}s`;
+  if (hours > 0) return `${hours}s ${String(minutes).padStart(2, '0')}d`;
+  return `${minutes}d`;
+}
+
 function setScreen(screen) {
   elements.homeScreen.classList.toggle('active', screen === 'home');
   elements.gameScreen.classList.toggle('active', screen === 'game');
@@ -143,15 +169,9 @@ function renderProgressBar(progress, target = 100) {
 
 function renderRewardIcon(type) {
   const icons = {
-    gold: 'coin',
-    stars: 'star',
-    lives: 'heart',
-    hint: 'hint',
-    shuffle: 'bomb',
-    undo: 'undo',
-    chest: 'chest',
-    gift: 'gift',
-    piggy: 'piggy'
+    gold: 'coin', stars: 'star', lives: 'heart', heart: 'heart',
+    hint: 'hint', shuffle: 'bomb', undo: 'undo', chest: 'chest',
+    gift: 'gift', piggy: 'piggy', dice: 'bomb'
   };
   return `<span class="reward-icon reward-${icons[type] ?? type}"></span>`;
 }
@@ -169,118 +189,439 @@ function formatGoals(goals) {
   }).join('');
 }
 
-function renderLevelStrip() {
-  const start = Math.max(0, state.levelIndex - 11);
-  const end = Math.min(state.levels.length, start + 24);
-  elements.levelStrip.innerHTML = state.levels.slice(start, end).map((level, index) => {
-    const realIndex = start + index;
-    const active = realIndex === state.levelIndex ? 'active' : '';
-    const done = realIndex < state.levelIndex ? 'done' : '';
-    return `<button class="level-node ${active} ${done}" data-level="${realIndex}"><span>${level.id}</span><small>${level.band}</small></button>`;
-  }).join('');
-}
-
 function renderHome() {
   elements.homeLives.textContent = state.lives;
   elements.homeGold.textContent = state.gold;
-  elements.homeStreak.textContent = state.streak;
-  const dailyAlreadyClaimed = state.dailyClaimedDate === new Date().toDateString();
-  elements.dailyStreak.textContent = dailyAlreadyClaimed ? 'Bugunku odul alindi' : '1. gun odulu hazir';
-  elements.claimDaily.disabled = dailyAlreadyClaimed;
+  elements.homeStars.textContent = state.meta.stars;
+
+  const level = getCurrentLevel(state);
+  elements.levelNumber.textContent = level.id;
+
   elements.playButton.disabled = state.lives <= 0;
   elements.continueButton.classList.toggle('hidden', state.status !== 'playing');
-  elements.watchLifeAd.disabled = state.lives >= 5;
-  elements.levelCard.classList.toggle('hidden', activeHomeTab !== 'home');
-  elements.metaPanel.classList.toggle('hidden', activeHomeTab === 'home');
-  elements.homeNavButtons.forEach((button) => {
-    button.classList.toggle('active', button.dataset.tab === activeHomeTab);
+
+  // XP bar
+  const xpProgress = state.meta.matchEvent.progress;
+  const xpTarget = state.meta.matchEvent.target;
+  const xpPercent = Math.min(100, Math.round((xpProgress / xpTarget) * 100));
+  elements.xpFill.style.width = `${xpPercent}%`;
+  elements.xpLabel.textContent = `${xpProgress}/${xpTarget}`;
+
+  // Event timer
+  const remaining = state.meta.matchEvent.expiresAt - Date.now();
+  elements.eventTimerLabel.textContent = formatCountdown(remaining);
+
+  // Show island view or meta panel based on tab
+  const showIsland = activeHomeTab === 'home';
+  elements.islandView.classList.toggle('hidden', !showIsland);
+  elements.metaPanel.classList.toggle('hidden', showIsland);
+
+  elements.navTabs.forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === activeHomeTab);
   });
-  renderMetaPanel();
-  renderLevelStrip();
+
+  if (!showIsland) renderMetaPanel();
 }
 
 function renderMetaPanel() {
-  if (activeHomeTab === 'home') {
-    elements.metaPanel.innerHTML = '';
+  if (activeHomeTab === 'shop') {
+    renderShop();
+    return;
+  }
+
+  if (activeHomeTab === 'events') {
+    renderEvents();
     return;
   }
 
   if (activeHomeTab === 'rewards') {
-    const tracks = state.meta.tracks;
-    const claimed = state.meta.lastClaimedReward;
-    elements.metaPanel.innerHTML = `
-      <div class="meta-header"><span class="label">Odul Merkezi</span><strong>Bir bolum daha, bir odul daha</strong></div>
-      ${claimed ? `
-        <div class="claim-banner">
-          ${renderRewardIcon('gold')}
-          <div><strong>Yeni odul alindi</strong><span>+${claimed.gold} altin, +${claimed.stars} yildiz</span></div>
-        </div>
-      ` : ''}
-      <div class="reward-grid">
-        ${renderTrackCard('Seviye Kutusu', 'chest', tracks.levelChest)}
-        ${renderTrackCard('Ucretsiz Odul', 'gift', tracks.freeGift)}
-        ${renderTrackCard('Eslesme Pasi', 'star', tracks.matchPass)}
-        ${renderTrackCard('Kumbara', 'piggy', tracks.piggyBank, `${tracks.piggyBank.coins} altin`)}
-      </div>
-      <div class="island-card">
-        <div>
-          <span class="label">${state.meta.island.name}</span>
-          <strong>${state.meta.island.nextDecoration}</strong>
-          ${renderProgressBar(state.meta.island.progress)}
-        </div>
-        <div class="island-preview"><span></span><span></span><span></span></div>
-      </div>
-    `;
+    renderRewardHub();
     return;
   }
 
-  if (activeHomeTab === 'quests') {
-    elements.metaPanel.innerHTML = `
-      <div class="meta-header"><span class="label">Gunluk Gorev</span><strong>Bugunku hedefleri tamamla</strong></div>
-      <div class="quest-list">
-        ${state.meta.quests.map((quest) => `
-          <article class="quest-card ${quest.progress >= quest.target ? 'complete' : ''}">
-            <div>
-              <strong>${quest.label}</strong>
-              ${renderProgressBar(quest.progress, quest.target)}
-            </div>
-            <span>${quest.progress}/${quest.target}</span>
-            <small>${quest.reward}</small>
-          </article>
-        `).join('')}
-      </div>
-    `;
+  if (activeHomeTab === 'gifts') {
+    renderGifts();
     return;
   }
+}
+
+function renderShop() {
+  const packages = getShopPackages();
+  elements.metaPanel.innerHTML = `
+    <div class="meta-header">
+      <span class="label">MAGAZA</span>
+      <strong>Ozel Paketler</strong>
+    </div>
+    <div class="shop-list">
+      ${packages.map((pkg) => `
+        <article class="shop-card ${pkg.featured ? 'featured' : ''}">
+          ${pkg.badge ? `<span class="shop-card-badge">${pkg.badge}</span>` : ''}
+          <div class="shop-card-header">
+            <strong>${pkg.name}</strong>
+          </div>
+          <div class="shop-card-items">
+            ${pkg.gold ? `<span class="shop-item">${renderRewardIcon('gold')} ${pkg.gold.toLocaleString()}</span>` : ''}
+            ${pkg.livesMinutes ? `<span class="shop-item">${renderRewardIcon('heart')} ${pkg.livesMinutes}m</span>` : ''}
+            ${Object.entries(pkg.boosters).map(([key, val]) =>
+              val ? `<span class="shop-item">${renderRewardIcon(key)} x${val}</span>` : ''
+            ).join('')}
+          </div>
+          <button class="price-button" data-package="${pkg.id}">${pkg.price}</button>
+        </article>
+      `).join('')}
+    </div>
+    <button class="shop-restore-btn">Geri Yukle</button>
+  `;
+
+  elements.metaPanel.querySelectorAll('[data-package]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state = purchasePackage(state, btn.dataset.package);
+      render();
+    });
+  });
+}
+
+function renderEvents() {
+  const quests = state.meta.quests;
+  const questsDone = quests.filter((q) => q.progress >= q.target).length;
+  const questsTotal = quests.length;
+  const matchEvent = state.meta.matchEvent;
+  const matchRemaining = matchEvent.expiresAt - Date.now();
 
   elements.metaPanel.innerHTML = `
-    <div class="meta-header"><span class="label">Magaza</span><strong>Test paketleri</strong></div>
-    <div class="shop-list">
-      ${renderShopCard('Baslangic Paketi', '+900 altin, +1 ipucu, +1 karistir', '$0.00')}
-      ${renderShopCard('Eslesme Paketi', '+3500 altin, 3 guclendirici', '$0.00')}
-      ${renderShopCard('Reklamsiz Paket', 'Gecis reklamlarini kaldir', '$0.00')}
+    <div class="quest-panel">
+      <!-- Daily Quests -->
+      <div class="quest-header">
+        <h3>Gunluk Gorev</h3>
+        <div class="quest-timer">\u23F1 ${formatCountdown(state.meta.dailySpin.expiresAt - Date.now())}</div>
+      </div>
+      <div class="quest-progress-bar">
+        <div class="xp-bar">
+          <span style="width:${Math.round((questsDone / questsTotal) * 100)}%"></span>
+          <strong>${questsDone} / ${questsTotal}</strong>
+        </div>
+        ${renderRewardIcon('gift')}
+      </div>
+      <div class="quest-list">
+        ${quests.map((quest) => {
+          const done = quest.progress >= quest.target;
+          const percent = Math.min(100, Math.round((quest.progress / quest.target) * 100));
+          return `
+            <article class="quest-card ${done ? 'complete' : ''}">
+              <div class="quest-icon" style="font-size:1.2rem">${quest.id === 'login' ? '\uD83D\uDCC5' : quest.id === 'stars' ? '\u2B50' : quest.id === 'dice' ? '\uD83C\uDFB2' : '\uD83C\uDFAF'}</div>
+              <div class="quest-info">
+                <strong>${quest.label}</strong>
+                <div class="quest-progress">
+                  <span style="width:${percent}%"></span>
+                  <strong>${quest.progress}/${quest.target}</strong>
+                </div>
+              </div>
+              <div class="quest-reward">
+                <button class="quest-reward-check ${done ? '' : 'locked'}" data-quest="${quest.id}" ${done ? '' : 'disabled'}>
+                  ${done ? '\u2713' : '\uD83D\uDD12'}
+                </button>
+                <small style="font-size:0.6rem;font-weight:800;color:#6c7a80">${quest.reward}</small>
+              </div>
+            </article>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Matching Event -->
+      <div class="event-header" style="margin-top:12px">
+        <h3>Eslestirme Gorevi</h3>
+        <div class="quest-timer">\u23F1 ${formatCountdown(matchRemaining)}</div>
+      </div>
+      <div class="quest-progress-bar">
+        <div class="xp-bar">
+          <span style="width:${Math.round((matchEvent.progress / matchEvent.target) * 100)}%"></span>
+          <strong>${matchEvent.progress}/${matchEvent.target}</strong>
+        </div>
+        ${renderRewardIcon('gift')}
+      </div>
+      <div class="event-track">
+        <div class="event-track-line"></div>
+        ${matchEvent.rewards.map((reward) => `
+          <div class="event-reward-item">
+            <span class="event-tier-badge ${reward.claimed ? 'earned' : 'locked'}">${reward.tier}</span>
+            <div class="event-reward-card ${reward.claimed ? '' : 'locked'}">
+              ${renderRewardIcon(reward.icon)}
+              <strong style="flex:1;text-align:left;margin-left:8px">${reward.label}</strong>
+              ${reward.claimed ? '' : '<span class="lock-badge">\uD83D\uDD12</span>'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  elements.metaPanel.querySelectorAll('[data-quest]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state = claimQuestReward(state, btn.dataset.quest);
+      render();
+    });
+  });
+}
+
+function renderRewardHub() {
+  const tracks = state.meta.tracks;
+  const village = state.meta.village;
+  const matchEvent = state.meta.matchEvent;
+  const battlePass = state.meta.battlePass;
+  const dailySpin = state.meta.dailySpin;
+  const treasureIsland = state.meta.treasureIsland;
+  const piggyBank = tracks.piggyBank;
+  const beeRace = state.meta.beeRace;
+
+  elements.metaPanel.innerHTML = `
+    <div class="reward-hub">
+      <div class="meta-header">
+        <span class="label">Odul</span>
+        <strong>Odul Merkezi</strong>
+      </div>
+
+      <div class="reward-grid">
+        <article class="reward-hub-card" data-overlay="levelChest">
+          ${renderRewardIcon('chest')}
+          <strong>Seviye Kutusu</strong>
+          <div class="reward-hub-progress"><span style="width:${Math.round((tracks.levelChest.progress / tracks.levelChest.target) * 100)}%"></span><small>${Math.round((tracks.levelChest.progress / tracks.levelChest.target) * 100)}%</small></div>
+        </article>
+        <article class="reward-hub-card" data-overlay="freeGift">
+          ${renderRewardIcon('gift')}
+          <strong>Ucretsiz Oduller</strong>
+          <span class="reward-hub-timer">\u23F1 ${formatCountdown(dailySpin.expiresAt - Date.now())}</span>
+        </article>
+        <article class="reward-hub-card" data-overlay="matchEvent">
+          ${renderRewardIcon('star')}
+          <strong>Eslestirme Gorevi</strong>
+          <div class="reward-hub-progress"><span style="width:${Math.round((matchEvent.progress / matchEvent.target) * 100)}%"></span><small>${Math.round((matchEvent.progress / matchEvent.target) * 100)}%</small></div>
+        </article>
+
+        <article class="reward-hub-card" data-overlay="dailySpin">
+          ${renderRewardIcon('gold')}
+          <strong>Gunluk Donus</strong>
+          <span class="reward-hub-timer">\u23F1 ${formatCountdown(dailySpin.expiresAt - Date.now())}</span>
+        </article>
+        <article class="reward-hub-card" data-overlay="treasureIsland">
+          ${renderRewardIcon('chest')}
+          <strong>Hazine Adasi</strong>
+          <div class="reward-hub-progress"><span style="width:${Math.round((treasureIsland.progress / treasureIsland.target) * 100)}%"></span><small>${Math.round((treasureIsland.progress / treasureIsland.target) * 100)}%</small></div>
+        </article>
+        <article class="reward-hub-card" data-overlay="piggyBank">
+          ${renderRewardIcon('piggy')}
+          <strong>Kumbara</strong>
+          <div class="reward-hub-progress"><span style="width:${Math.round((piggyBank.progress / piggyBank.target) * 100)}%"></span><small>${piggyBank.coins} altin</small></div>
+        </article>
+
+        <article class="reward-hub-card" data-overlay="battlePass">
+          ${renderRewardIcon('star')}
+          <strong>Eslestirme Pas</strong>
+          <div class="reward-hub-progress"><span style="width:${Math.round((battlePass.progress / battlePass.target) * 100)}%"></span><small>${Math.round((battlePass.progress / battlePass.target) * 100)}%</small></div>
+        </article>
+        <article class="reward-hub-card" data-overlay="quests">
+          ${renderRewardIcon('hint')}
+          <strong>Gunluk Gorev</strong>
+          <span class="reward-hub-timer">\u23F1 ${formatCountdown(dailySpin.expiresAt - Date.now())}</span>
+        </article>
+        <article class="reward-hub-card" data-overlay="beeRace">
+          ${renderRewardIcon('gold')}
+          <strong>Ari Yarisi</strong>
+          <div class="reward-hub-progress"><span style="width:${Math.round((beeRace.progress / beeRace.target) * 100)}%"></span><small>${Math.round((beeRace.progress / beeRace.target) * 100)}%</small></div>
+        </article>
+      </div>
+
+      <div class="reward-buttons">
+        <button class="reward-btn-edit">DUZENLE</button>
+        <button class="reward-btn-next" id="reward-next-btn">SONRAKI</button>
+      </div>
+    </div>
+  `;
+
+  elements.metaPanel.querySelectorAll('[data-overlay]').forEach((card) => {
+    card.addEventListener('click', () => {
+      openOverlay(card.dataset.overlay);
+    });
+  });
+}
+
+function renderGifts() {
+  const village = state.meta.village;
+  const builtCount = village.buildings.filter((b) => b.built).length;
+  const totalCount = village.buildings.length;
+  const progress = totalCount > 0 ? Math.round((builtCount / totalCount) * 100) : 0;
+
+  elements.metaPanel.innerHTML = `
+    <div class="village-panel">
+      <div class="village-header">
+        <h3>${village.name}</h3>
+      </div>
+      <div class="village-reward-bar">
+        <span>Odul</span>
+        <div class="progress-bar" style="flex:1"><span style="width:${progress}%"></span><strong>${progress}%</strong></div>
+        ${renderRewardIcon('gift')}
+      </div>
+      <div class="village-buildings">
+        ${village.buildings.map((building) => {
+          const canBuild = !building.built && state.meta.stars >= building.cost;
+          const buildingIcons = { shop: '\uD83C\uDF81', house: '\uD83C\uDFE0', tree: '\uD83C\uDF84', park: '\u26F8', fountain: '\u26F2' };
+          return `
+            <article class="village-building">
+              <div class="building-icon">${buildingIcons[building.id] ?? '\uD83C\uDFD7'}</div>
+              <div class="building-info">
+                <strong>${building.name}</strong>
+              </div>
+              <button class="building-btn ${building.built ? 'built' : canBuild ? 'can-build' : 'cannot-build'}" 
+                      data-building="${building.id}" ${building.built || !canBuild ? 'disabled' : ''}>
+                ${building.built ? '\u2713 Yapildi' : `Yap \u2605 ${building.cost}`}
+              </button>
+            </article>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Daily Reward -->
+      <div class="village-reward-bar" style="margin-top:12px">
+        <div style="flex:1">
+          <span class="label" style="color:var(--ink)">Gunluk Seri</span>
+          <strong id="daily-streak" style="display:block;margin-top:4px;font-size:0.85rem;color:var(--ink)">${state.dailyClaimedDate === new Date().toDateString() ? 'Bugunku odul alindi' : '1. gun odulu hazir'}</strong>
+        </div>
+        <button id="claim-daily" class="building-btn can-build" ${state.dailyClaimedDate === new Date().toDateString() ? 'disabled' : ''}>Odul Al</button>
+      </div>
+
+      <!-- Watch Ad for Life -->
+      <button id="watch-life-ad" class="shop-restore-btn" ${state.lives >= 5 ? 'disabled' : ''}>Reklam Izle +1 Can</button>
+    </div>
+  `;
+
+  elements.metaPanel.querySelectorAll('[data-building]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state = buildVillageBuilding(state, btn.dataset.building);
+      render();
+    });
+  });
+
+  const claimDailyBtn = elements.metaPanel.querySelector('#claim-daily');
+  if (claimDailyBtn) {
+    claimDailyBtn.addEventListener('click', () => {
+      state = claimDailyReward(state);
+      render();
+    });
+  }
+
+  const watchLifeBtn = elements.metaPanel.querySelector('#watch-life-ad');
+  if (watchLifeBtn) {
+    watchLifeBtn.addEventListener('click', () => {
+      state = watchLifeAd(state);
+      render();
+    });
+  }
+}
+
+function openOverlay(type) {
+  elements.overlayPanel.classList.remove('hidden');
+
+  if (type === 'dailySpin') {
+    const today = new Date().toDateString();
+    const alreadySpun = state.meta.dailySpin.lastSpinDate === today;
+    elements.overlayBody.innerHTML = `
+      <div class="spin-panel">
+        <div class="spin-header">
+          <h3>Gunluk Donus</h3>
+          <div class="quest-timer">\u23F1 ${formatCountdown(state.meta.dailySpin.expiresAt - Date.now())}</div>
+        </div>
+        <div class="spin-wheel">
+          <div class="spin-center">CEVIR</div>
+        </div>
+        <button class="spin-btn" id="spin-btn" ${alreadySpun ? 'disabled' : ''}>${alreadySpun ? 'Yarin tekrar gel!' : 'Carki Cevir!'}</button>
+      </div>
+    `;
+    const spinBtn = document.querySelector('#spin-btn');
+    if (spinBtn) {
+      spinBtn.addEventListener('click', () => {
+        state = spinDailyWheel(state);
+        closeOverlay();
+        render();
+      });
+    }
+    return;
+  }
+
+  if (type === 'battlePass') {
+    const bp = state.meta.battlePass;
+    elements.overlayBody.innerHTML = `
+      <div class="pass-panel">
+        <div class="pass-header">
+          <h3>Eslestirme Pas</h3>
+          <div class="quest-timer">\u23F1 ${formatCountdown(bp.expiresAt - Date.now())}</div>
+          <div style="margin-top:8px">
+            <span style="font-size:0.8rem;opacity:0.8">${bp.progress}/${bp.target}</span>
+            <div class="xp-bar" style="margin-top:4px">
+              <span style="width:${Math.round((bp.progress / bp.target) * 100)}%"></span>
+              <strong>${bp.progress}/${bp.target}</strong>
+            </div>
+          </div>
+          ${!bp.active ? `<button class="pass-activate-btn" id="activate-pass" style="margin-top:8px">Etkinlestir</button>` : ''}
+        </div>
+        <div style="display:grid;gap:8px">
+          ${bp.freeTier.map((item, i) => `
+            <div class="pass-track">
+              <div class="pass-free ${item.claimed ? 'earned' : ''}">
+                ${renderRewardIcon(item.icon)}
+                <small style="display:block;font-size:0.65rem;font-weight:800;margin-top:2px">${item.label}</small>
+                ${item.claimed ? '<span style="color:var(--green);">\u2713</span>' : ''}
+              </div>
+              <div class="pass-connector">
+                <span class="pass-star ${i < bp.progress ? 'earned' : 'locked'}">${i + 1}</span>
+                ${i < bp.freeTier.length - 1 ? '<div class="pass-line"></div>' : ''}
+              </div>
+              <div class="pass-premium ${bp.premiumTier[i].locked ? 'locked' : ''}">
+                ${renderRewardIcon(bp.premiumTier[i].icon)}
+                <small style="display:block;font-size:0.65rem;font-weight:800;margin-top:2px">${bp.premiumTier[i].label}</small>
+                ${bp.premiumTier[i].locked ? '<span class="lock-badge" style="margin:4px auto 0">\uD83D\uDD12</span>' : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if (type === 'matchEvent') {
+    activeHomeTab = 'events';
+    closeOverlay();
+    render();
+    return;
+  }
+
+  if (type === 'quests') {
+    activeHomeTab = 'events';
+    closeOverlay();
+    render();
+    return;
+  }
+
+  // Generic overlay for other types
+  const labels = {
+    levelChest: 'Seviye Kutusu',
+    freeGift: 'Ucretsiz Oduller',
+    treasureIsland: 'Hazine Adasi',
+    piggyBank: 'Kumbara',
+    beeRace: 'Ari Yarisi'
+  };
+
+  elements.overlayBody.innerHTML = `
+    <div style="text-align:center;padding:20px 0">
+      <h3 style="color:#fff;font-size:1.3rem;margin-bottom:12px">${labels[type] ?? type}</h3>
+      <p style="color:rgba(255,255,255,0.7);font-size:0.9rem">Yakinda geliyor!</p>
+      ${renderRewardIcon('gift')}
     </div>
   `;
 }
 
-function renderTrackCard(title, icon, track, note = 'Odul hazirlaniyor') {
-  return `
-    <article class="track-card">
-      ${renderRewardIcon(icon)}
-      <strong>${title}</strong>
-      <small>${note}</small>
-      ${renderProgressBar(track.progress, track.target)}
-    </article>
-  `;
-}
-
-function renderShopCard(title, copy, price) {
-  return `
-    <article class="shop-card">
-      <div>${renderRewardIcon('gift')}<strong>${title}</strong><small>${copy}</small></div>
-      <button class="price-button">${price}</button>
-    </article>
-  `;
+function closeOverlay() {
+  elements.overlayPanel.classList.add('hidden');
+  elements.overlayBody.innerHTML = '';
 }
 
 function renderBoard() {
@@ -415,7 +756,7 @@ function openLostModal() {
 }
 
 function openWinModal() {
-  const stars = '★'.repeat(state.lastStars);
+  const stars = '\u2605'.repeat(state.lastStars);
   const reward = state.pendingReward;
 
   if (!reward) {
@@ -532,6 +873,8 @@ function startSavedMusicOnInteraction() {
   render();
 }
 
+// ===== EVENT LISTENERS =====
+
 elements.playButton.addEventListener('click', () => {
   if (state.lives <= 0) return;
   state = startLevel(state, state.levelIndex);
@@ -555,28 +898,15 @@ elements.backHome.addEventListener('click', () => {
   render();
 });
 
-elements.claimDaily.addEventListener('click', () => {
-  state = claimDailyReward(state);
-  render();
+elements.overlayClose.addEventListener('click', closeOverlay);
+
+elements.overlayPanel.addEventListener('click', (event) => {
+  if (event.target === elements.overlayPanel) closeOverlay();
 });
 
-elements.watchLifeAd.addEventListener('click', () => {
-  state = watchLifeAd(state);
-  render();
-});
-
-elements.levelStrip.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-level]');
-  if (!button) return;
-  state = startLevel(state, Number(button.dataset.level));
-  setScreen('game');
-  hideModal();
-  render();
-});
-
-elements.homeNavButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    activeHomeTab = button.dataset.tab;
+elements.navTabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    activeHomeTab = tab.dataset.tab;
     render();
   });
 });

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#4f8f87" />
+  <meta name="theme-color" content="#4a7ff7" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Bir Hamle Daha" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -14,89 +14,148 @@
   <link rel="stylesheet" href="src/styles.css" />
 </head>
 <body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
   <main class="phone-shell" aria-label="Bir Hamle Daha mobil oyun prototipi">
+
+    <!-- ===== HOME SCREEN ===== -->
     <section id="home-screen" class="screen active">
-      <div class="hero-card">
-        <div class="hero-content">
-          <p class="eyebrow">Sakin ama hirs yaptiran puzzle</p>
-          <h1>Bir Hamle Daha</h1>
-          <p class="hero-copy">Eslesen taslari temizle, hedefleri bitir, hamlen biterse reklam izleyip devam et.</p>
-        </div>
-        <div class="hero-preview" aria-hidden="true">
-          <span class="preview-tile blue"><span class="symbol-icon icon-drop"></span></span>
-          <span class="preview-tile yellow"><span class="symbol-icon icon-sun"></span></span>
-          <span class="preview-tile pink"><span class="symbol-icon icon-flower"></span></span>
-          <span class="preview-tile purple"><span class="symbol-icon icon-moon"></span></span>
-          <span class="preview-tile green"><span class="symbol-icon icon-leaf"></span></span>
-          <span class="preview-tile orange"><span class="symbol-icon icon-star"></span></span>
-        </div>
-        <div class="feature-row" aria-label="Oyun ozellikleri">
-          <span>150 Bolum</span>
-          <span>Odullu Reklam</span>
-          <span>Sureli Rekabet</span>
-          <span>Gunluk Odul</span>
-        </div>
-      </div>
-
-      <div class="stats-grid" aria-label="Oyuncu bilgileri">
-        <article>
-          <span>Can</span>
-          <strong id="home-lives">5</strong>
-          <small>Hazir</small>
-        </article>
-        <article>
-          <span>Altin</span>
+      <!-- Top Bar -->
+      <header class="home-top-bar">
+        <button class="avatar-button" aria-label="Profil">
+          <span class="avatar-icon"></span>
+        </button>
+        <div class="top-stat gold-stat">
+          <span class="stat-icon stat-gold"></span>
           <strong id="home-gold">250</strong>
-          <small>Harcanir</small>
-        </article>
-        <article>
-          <span>Seri</span>
-          <strong id="home-streak">0</strong>
-          <small>Rekor</small>
-        </article>
-      </div>
-
-      <div class="daily-card">
-        <div>
-          <span class="label">Gunluk Seri</span>
-          <strong id="daily-streak">1. gun odulu hazir</strong>
-          <p>Bugun giris odulu: 75 altin + 1 ipucu.</p>
+          <button class="stat-plus" aria-label="Altin ekle">+</button>
         </div>
-        <button id="claim-daily" class="secondary-button">Odul Al</button>
+        <div class="top-stat lives-stat">
+          <span class="stat-icon stat-heart"></span>
+          <strong id="home-lives">5</strong>
+          <span class="lives-timer" id="lives-timer"></span>
+          <button class="stat-plus" aria-label="Can ekle">+</button>
+        </div>
+        <div class="top-stat stars-stat">
+          <span class="stat-icon stat-star"></span>
+          <strong id="home-stars">0</strong>
+        </div>
+        <button class="settings-button" aria-label="Ayarlar">
+          <span class="gear-icon"></span>
+        </button>
+      </header>
+
+      <!-- Main Content Area - changes based on activeHomeTab -->
+      <div id="home-main-content" class="home-main-content">
+        <!-- Default: Island/Map View -->
+        <div id="island-view" class="island-view">
+          <!-- XP / Level Progress -->
+          <div class="xp-bar-container">
+            <span class="xp-bolt"></span>
+            <div class="xp-bar">
+              <span id="xp-fill" style="width:0%"></span>
+              <strong id="xp-label">0/80</strong>
+            </div>
+            <button class="xp-gift" id="xp-gift-button" aria-label="XP Odulu">
+              <span class="reward-icon reward-gift"></span>
+            </button>
+          </div>
+
+          <!-- Event Timer -->
+          <div class="event-timer-bar">
+            <span class="timer-icon"></span>
+            <span id="event-timer-label">2g 00s</span>
+          </div>
+
+          <!-- Island Visual -->
+          <div class="island-scene">
+            <div class="island-graphic">
+              <div class="island-lighthouse"></div>
+              <div class="island-palm"></div>
+              <div class="island-ground"></div>
+            </div>
+
+            <!-- Event Icons around the island -->
+            <button class="event-badge event-chest" id="event-chest" aria-label="Hazine Kutusu">
+              <span class="event-badge-icon"></span>
+              <small>1g 00s</small>
+            </button>
+            <button class="event-badge event-bee" id="event-bee" aria-label="Ari Yarisi">
+              <span class="event-badge-icon"></span>
+              <small>3d 46s</small>
+            </button>
+            <button class="event-badge event-piggy" id="event-piggy" aria-label="Kumbara">
+              <span class="event-badge-icon"></span>
+              <small>10d 50s</small>
+            </button>
+            <button class="event-badge event-save" id="event-save" aria-label="Tasarruf">
+              <span class="event-badge-icon"></span>
+              <small>5g 00s</small>
+            </button>
+            <button class="event-badge event-ads" id="event-ads" aria-label="Reklamlari Kaldir">
+              <span class="ads-badge">ADS</span>
+              <small>Reklamlari kaldir</small>
+            </button>
+            <button class="event-badge event-gift" id="event-gift" aria-label="Sadece bir kez">
+              <span class="event-badge-icon"></span>
+              <small>Sadece bir kez</small>
+            </button>
+            <button class="event-badge event-pass" id="event-pass" aria-label="Eslestirme Pasi">
+              <span class="event-badge-icon"></span>
+              <small>11g 00s</small>
+            </button>
+            <button class="event-badge event-picnic" id="event-picnic" aria-label="Piknik">
+              <span class="event-badge-icon"></span>
+              <small>12g 00s</small>
+            </button>
+          </div>
+
+          <!-- Level Button -->
+          <button id="play-button" class="level-play-button">
+            <span>SEVIYE</span>
+            <strong id="level-number">1</strong>
+          </button>
+
+          <!-- Continue button -->
+          <button id="continue-button" class="continue-play-button hidden">Kaldigin Yerden Devam Et</button>
+        </div>
       </div>
 
-      <button id="play-button" class="primary-button">Oyna</button>
-      <button id="continue-button" class="secondary-button hidden">Kaldigin Yerden Devam Et</button>
-      <button id="watch-life-ad" class="ghost-button">Reklam Izle +1 Can</button>
-
+      <!-- Meta Panel (rewards, quests, shop, events) -->
       <section id="meta-panel" class="meta-panel hidden" aria-label="Oyun ilerleme paneli"></section>
 
-      <section id="level-card" class="level-card">
-        <div class="section-heading">
-          <span class="label">Seviye Yolu</span>
-          <strong>150 Bolumluk Yol</strong>
-        </div>
-        <div class="level-strip" id="level-strip" aria-label="Seviye yolu"></div>
-      </section>
-
-      <nav class="home-nav" aria-label="Ana ekran menusu">
-        <button class="home-nav-button active" data-tab="home">Ana Sayfa</button>
-        <button class="home-nav-button" data-tab="rewards">Oduller</button>
-        <button class="home-nav-button" data-tab="quests">Gorevler</button>
-        <button class="home-nav-button" data-tab="shop">Magaza</button>
+      <!-- Bottom Navigation -->
+      <nav class="bottom-nav" aria-label="Ana ekran menusu">
+        <button class="nav-tab" data-tab="shop" aria-label="Magaza">
+          <span class="nav-icon nav-shop"></span>
+          <small>MAGAZA</small>
+        </button>
+        <button class="nav-tab" data-tab="events" aria-label="Etkinlik">
+          <span class="nav-icon nav-events"></span>
+          <small>ETKINLIK</small>
+        </button>
+        <button class="nav-tab nav-home-tab active" data-tab="home" aria-label="Ana Sayfa">
+          <span class="nav-icon nav-home-icon"></span>
+          <small>ANA SAYFA</small>
+        </button>
+        <button class="nav-tab" data-tab="rewards" aria-label="Oduller">
+          <span class="nav-icon nav-trophy"></span>
+          <small>ODULLER</small>
+        </button>
+        <button class="nav-tab" data-tab="gifts" aria-label="Hediyeler">
+          <span class="nav-icon nav-gift"></span>
+          <small>HEDIYE</small>
+        </button>
       </nav>
     </section>
 
+    <!-- ===== GAME SCREEN ===== -->
     <section id="game-screen" class="screen">
-      <header class="top-bar">
-        <button id="back-home" class="icon-button" aria-label="Ana menuye don">‹</button>
-        <div>
+      <header class="game-top-bar">
+        <button id="back-home" class="game-back-button" aria-label="Ana menuye don">‹</button>
+        <div class="game-info">
           <span id="level-label">Bolum 1</span>
           <strong id="move-label">Hamle: 12</strong>
         </div>
-        <div class="timer-pill urgent-safe" aria-label="Sure"><span>Sure</span><strong id="timer-label">02:00</strong></div>
+        <div class="timer-pill" aria-label="Sure"><span>Sure</span><strong id="timer-label">02:00</strong></div>
         <div class="coin-pill" aria-label="Altin"><span>Altin</span><strong id="gold-label">250</strong></div>
       </header>
 
@@ -119,7 +178,7 @@
         <button id="hint-button"><span class="booster-icon">?</span><span>Ipucu</span><strong id="hint-count">3</strong></button>
         <button id="shuffle-button"><span class="booster-icon">~</span><span>Karistir</span><strong id="shuffle-count">2</strong></button>
         <button id="undo-button"><span class="booster-icon">&lt;</span><span>Geri Al</span><strong id="undo-count">2</strong></button>
-        <button id="sound-button"><span class="booster-icon">♪</span><span>Muzik</span><strong id="sound-label">Kapali</strong></button>
+        <button id="sound-button"><span class="booster-icon">&#9835;</span><span>Muzik</span><strong id="sound-label">Kapali</strong></button>
       </footer>
     </section>
   </main>
@@ -130,6 +189,14 @@
       <h2 id="modal-title">Cok az kaldi!</h2>
       <div id="modal-copy" class="modal-copy">5 hamle ile devam edebilirsin.</div>
       <div id="modal-actions" class="modal-actions"></div>
+    </div>
+  </div>
+
+  <!-- Overlay panels -->
+  <div id="overlay-panel" class="overlay-panel hidden" role="dialog" aria-modal="true">
+    <div class="overlay-content">
+      <button class="overlay-close" id="overlay-close" aria-label="Kapat">&#10006;</button>
+      <div id="overlay-body"></div>
     </div>
   </div>
 
