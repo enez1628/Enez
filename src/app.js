@@ -3,6 +3,7 @@ import {
   symbolById,
   applyMove,
   claimDailyReward,
+  claimPendingReward,
   continueWithAd,
   continueWithGold,
   createInitialState,
@@ -31,6 +32,9 @@ const elements = {
   continueButton: document.querySelector('#continue-button'),
   watchLifeAd: document.querySelector('#watch-life-ad'),
   levelStrip: document.querySelector('#level-strip'),
+  levelCard: document.querySelector('#level-card'),
+  metaPanel: document.querySelector('#meta-panel'),
+  homeNavButtons: document.querySelectorAll('.home-nav-button'),
   backHome: document.querySelector('#back-home'),
   levelLabel: document.querySelector('#level-label'),
   moveLabel: document.querySelector('#move-label'),
@@ -63,6 +67,7 @@ let resolvingMove = false;
 let audioContext = null;
 let musicTimer = null;
 let musicEnabled = localStorage.getItem(SOUND_KEY) === 'true' || state.musicEnabled === true;
+let activeHomeTab = 'home';
 
 function loadSavedState() {
   try {
@@ -72,11 +77,24 @@ function loadSavedState() {
     const levels = createLevels(150);
     const level = levels[saved.levelIndex] ?? levels[0];
     const base = createInitialState(levels);
+    const meta = {
+      ...base.meta,
+      ...(saved.meta ?? {}),
+      island: { ...base.meta.island, ...(saved.meta?.island ?? {}) },
+      tracks: {
+        levelChest: { ...base.meta.tracks.levelChest, ...(saved.meta?.tracks?.levelChest ?? {}) },
+        freeGift: { ...base.meta.tracks.freeGift, ...(saved.meta?.tracks?.freeGift ?? {}) },
+        matchPass: { ...base.meta.tracks.matchPass, ...(saved.meta?.tracks?.matchPass ?? {}) },
+        piggyBank: { ...base.meta.tracks.piggyBank, ...(saved.meta?.tracks?.piggyBank ?? {}) }
+      },
+      quests: saved.meta?.quests ?? base.meta.quests
+    };
 
     return {
       ...base,
       ...saved,
       levels,
+      meta,
       goals: saved.goals ?? { ...level.goals },
       board: saved.board ?? base.board,
       movesRemaining: Number.isFinite(saved.movesRemaining) ? saved.movesRemaining : level.moveLimit,
@@ -117,6 +135,26 @@ function renderSymbolIcon(symbolId) {
   return `<span class="symbol-icon icon-${symbolId}" aria-hidden="true"></span>`;
 }
 
+function renderProgressBar(progress, target = 100) {
+  const percent = Math.min(100, Math.round((progress / target) * 100));
+  return `<div class="progress-bar"><span style="width:${percent}%"></span><strong>${percent}%</strong></div>`;
+}
+
+function renderRewardIcon(type) {
+  const icons = {
+    gold: 'coin',
+    stars: 'star',
+    lives: 'heart',
+    hint: 'hint',
+    shuffle: 'bomb',
+    undo: 'undo',
+    chest: 'chest',
+    gift: 'gift',
+    piggy: 'piggy'
+  };
+  return `<span class="reward-icon reward-${icons[type] ?? type}"></span>`;
+}
+
 function formatGoals(goals) {
   return Object.entries(goals).map(([symbolId, remaining]) => {
     const symbol = symbolById.get(symbolId);
@@ -147,7 +185,90 @@ function renderHome() {
   elements.playButton.disabled = state.lives <= 0;
   elements.continueButton.classList.toggle('hidden', state.status !== 'playing');
   elements.watchLifeAd.disabled = state.lives >= 5;
+  elements.levelCard.classList.toggle('hidden', activeHomeTab !== 'home');
+  elements.metaPanel.classList.toggle('hidden', activeHomeTab === 'home');
+  elements.homeNavButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.tab === activeHomeTab);
+  });
+  renderMetaPanel();
   renderLevelStrip();
+}
+
+function renderMetaPanel() {
+  if (activeHomeTab === 'home') {
+    elements.metaPanel.innerHTML = '';
+    return;
+  }
+
+  if (activeHomeTab === 'rewards') {
+    const tracks = state.meta.tracks;
+    elements.metaPanel.innerHTML = `
+      <div class="meta-header"><span class="label">Odul Merkezi</span><strong>Bir bolum daha, bir odul daha</strong></div>
+      <div class="reward-grid">
+        ${renderTrackCard('Seviye Kutusu', 'chest', tracks.levelChest)}
+        ${renderTrackCard('Ucretsiz Odul', 'gift', tracks.freeGift)}
+        ${renderTrackCard('Eslesme Pasi', 'star', tracks.matchPass)}
+        ${renderTrackCard('Kumbara', 'piggy', tracks.piggyBank, `${tracks.piggyBank.coins} altin`)}
+      </div>
+      <div class="island-card">
+        <div>
+          <span class="label">${state.meta.island.name}</span>
+          <strong>${state.meta.island.nextDecoration}</strong>
+          ${renderProgressBar(state.meta.island.progress)}
+        </div>
+        <div class="island-preview"><span></span><span></span><span></span></div>
+      </div>
+    `;
+    return;
+  }
+
+  if (activeHomeTab === 'quests') {
+    elements.metaPanel.innerHTML = `
+      <div class="meta-header"><span class="label">Gunluk Gorev</span><strong>Bugunku hedefleri tamamla</strong></div>
+      <div class="quest-list">
+        ${state.meta.quests.map((quest) => `
+          <article class="quest-card ${quest.progress >= quest.target ? 'complete' : ''}">
+            <div>
+              <strong>${quest.label}</strong>
+              ${renderProgressBar(quest.progress, quest.target)}
+            </div>
+            <span>${quest.progress}/${quest.target}</span>
+            <small>${quest.reward}</small>
+          </article>
+        `).join('')}
+      </div>
+    `;
+    return;
+  }
+
+  elements.metaPanel.innerHTML = `
+    <div class="meta-header"><span class="label">Magaza</span><strong>Test paketleri</strong></div>
+    <div class="shop-list">
+      ${renderShopCard('Baslangic Paketi', '+900 altin, +1 ipucu, +1 karistir', '$0.00')}
+      ${renderShopCard('Eslesme Paketi', '+3500 altin, 3 guclendirici', '$0.00')}
+      ${renderShopCard('Reklamsiz Paket', 'Gecis reklamlarini kaldir', '$0.00')}
+    </div>
+  `;
+}
+
+function renderTrackCard(title, icon, track, note = 'Odul hazirlaniyor') {
+  return `
+    <article class="track-card">
+      ${renderRewardIcon(icon)}
+      <strong>${title}</strong>
+      <small>${note}</small>
+      ${renderProgressBar(track.progress, track.target)}
+    </article>
+  `;
+}
+
+function renderShopCard(title, copy, price) {
+  return `
+    <article class="shop-card">
+      <div>${renderRewardIcon('gift')}<strong>${title}</strong><small>${copy}</small></div>
+      <button class="price-button">${price}</button>
+    </article>
+  `;
 }
 
 function renderBoard() {
@@ -206,10 +327,14 @@ function hideModal() {
   elements.modalActions.innerHTML = '';
 }
 
-function showModal({ badge, title, copy, actions }) {
+function showModal({ badge, title, copy, html, actions }) {
   elements.modalBadge.textContent = badge;
   elements.modalTitle.textContent = title;
-  elements.modalCopy.textContent = copy;
+  if (html) {
+    elements.modalCopy.innerHTML = html;
+  } else {
+    elements.modalCopy.textContent = copy;
+  }
   elements.modalActions.innerHTML = '';
 
   actions.forEach((action) => {
@@ -279,26 +404,61 @@ function openLostModal() {
 
 function openWinModal() {
   const stars = '★'.repeat(state.lastStars);
+  const reward = state.pendingReward;
+
+  if (!reward) {
+    state = nextLevel(state);
+    render();
+    return;
+  }
 
   showModal({
-    badge: 'Bolum Tamamlandi',
-    title: `${stars} Tebrikler!`,
-    copy: `Puan: ${state.score}. Altin ve seri odulu kazandin.`,
+    badge: 'Odul',
+    title: `${stars} Kazandin!`,
+    html: `
+      <div class="reward-modal">
+        <div class="reward-items">
+          <article>${renderRewardIcon('gold')}<strong>+${reward.gold}</strong><span>Altin</span></article>
+          <article>${renderRewardIcon('stars')}<strong>+${reward.stars}</strong><span>Yildiz</span></article>
+          <article>${renderRewardIcon('lives')}<strong>${reward.unlimitedLivesMinutes}m</strong><span>Can</span></article>
+          <article>${renderRewardIcon('hint')}<strong>+${reward.boosters.hint}</strong><span>Ipucu</span></article>
+          <article>${renderRewardIcon('shuffle')}<strong>+${reward.boosters.shuffle}</strong><span>Karistir</span></article>
+          <article>${renderRewardIcon('undo')}<strong>+${reward.boosters.undo}</strong><span>Geri Al</span></article>
+        </div>
+        <div class="reward-progress">
+          <strong>Zeka Adasi</strong>
+          ${renderProgressBar(state.meta.island.progress + reward.progress.island)}
+        </div>
+      </div>
+    `,
     actions: [
       {
-        label: 'Sonraki Bolum',
+        label: 'Talep Et',
         onClick: () => {
-          state = nextLevel(state);
+          state = claimPendingReward(state);
           hideModal();
+          setScreen('home');
+          activeHomeTab = 'rewards';
           render();
         }
       },
       {
-        label: 'Ana Menu',
+        label: '2x Reklamla Al',
         variant: 'secondary-button',
         onClick: () => {
+          state = claimPendingReward(state, 2);
           hideModal();
           setScreen('home');
+          activeHomeTab = 'rewards';
+          render();
+        }
+      },
+      {
+        label: 'Sonraki Bolum',
+        variant: 'ghost-button',
+        onClick: () => {
+          state = nextLevel(state);
+          hideModal();
           render();
         }
       }
@@ -398,6 +558,13 @@ elements.levelStrip.addEventListener('click', (event) => {
   setScreen('game');
   hideModal();
   render();
+});
+
+elements.homeNavButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    activeHomeTab = button.dataset.tab;
+    render();
+  });
 });
 
 elements.board.addEventListener('click', (event) => {

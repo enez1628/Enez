@@ -309,6 +309,179 @@ h1 {
   padding: 14px;
 }
 
+.meta-panel {
+  display: grid;
+  gap: 12px;
+  max-height: 360px;
+  overflow: auto;
+  padding-bottom: 4px;
+}
+
+.meta-header,
+.island-card,
+.track-card,
+.quest-card,
+.shop-card {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 14px 32px rgba(42, 73, 76, 0.1);
+}
+
+.meta-header {
+  padding: 16px;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 212, 95, 0.5), transparent 6rem),
+    linear-gradient(135deg, rgba(113, 87, 216, 0.95), rgba(47, 156, 124, 0.9));
+  color: #ffffff;
+}
+
+.meta-header .label,
+.meta-header strong {
+  color: #ffffff;
+}
+
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.track-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.track-card strong,
+.quest-card strong,
+.shop-card strong {
+  color: var(--ink);
+}
+
+.track-card small,
+.quest-card small,
+.shop-card small {
+  color: #6c8388;
+  font-weight: 800;
+}
+
+.progress-bar {
+  position: relative;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4eceb;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #53bd75, #ffe35f);
+}
+
+.progress-bar strong {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #244f55;
+  font-size: 0.68rem;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.island-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.65), transparent 4rem),
+    linear-gradient(135deg, #bfe9ff, #eaf8ef);
+}
+
+.island-preview {
+  position: relative;
+  width: 84px;
+  height: 62px;
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(180deg, #52c7ff, #2a98df);
+  box-shadow: inset 0 -12px 0 rgba(31, 103, 103, 0.2);
+}
+
+.island-preview span {
+  position: absolute;
+  bottom: 12px;
+  width: 22px;
+  height: 28px;
+  border-radius: 12px 12px 4px 4px;
+  background: #ffd45f;
+}
+
+.island-preview span:nth-child(1) { left: 15px; }
+.island-preview span:nth-child(2) { left: 35px; bottom: 18px; background: #53bd75; }
+.island-preview span:nth-child(3) { right: 14px; background: #ff8ab5; }
+
+.quest-list,
+.shop-list {
+  display: grid;
+  gap: 10px;
+}
+
+.quest-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+}
+
+.quest-card.complete {
+  outline: 3px solid rgba(83, 189, 117, 0.28);
+}
+
+.quest-card > span {
+  color: #23756f;
+  font-weight: 1000;
+}
+
+.quest-card small {
+  grid-column: 1 / -1;
+}
+
+.shop-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(180deg, #fffdf4, #f6ecff);
+}
+
+.shop-card > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.shop-card small {
+  grid-column: 2;
+}
+
+.price-button {
+  min-width: 86px;
+  min-height: 42px;
+  border-radius: 14px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #67dd59, #22a643);
+  font-weight: 1000;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.15);
+}
+
 .section-heading {
   display: flex;
   align-items: end;
@@ -325,6 +498,31 @@ h1 {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 10px;
+}
+
+.home-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: auto;
+  padding: 8px;
+  border-radius: 24px;
+  background: rgba(84, 42, 180, 0.12);
+}
+
+.home-nav-button {
+  min-height: 48px;
+  border-radius: 16px;
+  color: #4b5f64;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+  font-weight: 1000;
+}
+
+.home-nav-button.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, #7b56f2, #4a28bd);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.16);
 }
 
 .level-node {
@@ -800,7 +998,7 @@ h1 {
   line-height: 1.08;
 }
 
-.modal-card p {
+.modal-copy {
   margin: 0 auto 18px;
   color: #49666b;
   font-size: 1.05rem;
@@ -811,6 +1009,78 @@ h1 {
   display: grid;
   gap: 10px;
 }
+
+.reward-modal {
+  display: grid;
+  gap: 14px;
+}
+
+.reward-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.reward-items article {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 10px 6px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(35, 89, 85, 0.08);
+}
+
+.reward-items strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.reward-items span {
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.reward-progress {
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff8df, #eaf8ef);
+}
+
+.reward-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ffd45f, #ef9d2f);
+  box-shadow: 0 5px 12px rgba(45, 69, 75, 0.14), inset 0 -4px 0 rgba(0, 0, 0, 0.12);
+}
+
+.reward-icon::before {
+  font-weight: 1000;
+  font-size: 1rem;
+}
+
+.reward-coin::before { content: "$"; }
+.reward-star::before { content: "★"; }
+.reward-heart::before { content: "∞"; }
+.reward-hint::before { content: "?"; }
+.reward-bomb::before { content: "●"; }
+.reward-undo::before { content: "<"; }
+.reward-chest::before { content: "▣"; }
+.reward-gift::before { content: "◆"; }
+.reward-piggy::before { content: "¤"; }
+
+.reward-heart { background: linear-gradient(135deg, #ff5c8a, #d92c6d); }
+.reward-hint { background: linear-gradient(135deg, #53bd75, #2d8555); }
+.reward-bomb { background: linear-gradient(135deg, #7b56f2, #4a28bd); }
+.reward-undo { background: linear-gradient(135deg, #ffad65, #e56c39); }
+.reward-chest { background: linear-gradient(135deg, #ffce57, #b86b25); }
+.reward-gift { background: linear-gradient(135deg, #ff8ab5, #7157d8); }
+.reward-piggy { background: linear-gradient(135deg, #ff9cb9, #f26095); }
 
 @media (min-width: 700px) {
   .phone-shell {

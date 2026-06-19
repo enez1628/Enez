@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   applyMove,
   claimDailyReward,
+  claimPendingReward,
   continueWithAd,
   createInitialState,
   createLevels,
@@ -73,8 +74,22 @@ function alwaysLeaf() {
   assert.equal(state.goals.leaf, 0);
   assert.equal(state.movesRemaining, 1);
   assert.ok(state.score > 0);
-  assert.ok(state.gold > 250);
+  assert.equal(state.gold, 250);
+  assert.ok(state.pendingReward);
+  assert.ok(state.pendingReward.gold > 0);
   assert.equal(isLevelComplete(state.goals), true);
+}
+
+{
+  let state = applyMove(makeState(), 0, 0, alwaysLeaf);
+  state = claimPendingReward(state);
+
+  assert.equal(state.status, 'home');
+  assert.equal(state.pendingReward, null);
+  assert.ok(state.gold > 250);
+  assert.ok(state.meta.stars > 0);
+  assert.ok(state.meta.tracks.levelChest.progress > 0);
+  assert.equal(state.meta.quests.find((quest) => quest.id === 'levels').progress, 1);
 }
 
 {

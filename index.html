@@ -71,13 +71,22 @@
       <button id="continue-button" class="secondary-button hidden">Kaldigin Yerden Devam Et</button>
       <button id="watch-life-ad" class="ghost-button">Reklam Izle +1 Can</button>
 
-      <section class="level-card">
+      <section id="meta-panel" class="meta-panel hidden" aria-label="Oyun ilerleme paneli"></section>
+
+      <section id="level-card" class="level-card">
         <div class="section-heading">
           <span class="label">Seviye Yolu</span>
           <strong>150 Bolumluk Yol</strong>
         </div>
         <div class="level-strip" id="level-strip" aria-label="Seviye yolu"></div>
       </section>
+
+      <nav class="home-nav" aria-label="Ana ekran menusu">
+        <button class="home-nav-button active" data-tab="home">Ana Sayfa</button>
+        <button class="home-nav-button" data-tab="rewards">Oduller</button>
+        <button class="home-nav-button" data-tab="quests">Gorevler</button>
+        <button class="home-nav-button" data-tab="shop">Magaza</button>
+      </nav>
     </section>
 
     <section id="game-screen" class="screen">
@@ -119,7 +128,7 @@
     <div class="modal-card">
       <span id="modal-badge" class="modal-badge">Son Hamle Analizi</span>
       <h2 id="modal-title">Cok az kaldi!</h2>
-      <p id="modal-copy">5 hamle ile devam edebilirsin.</p>
+      <div id="modal-copy" class="modal-copy">5 hamle ile devam edebilirsin.</div>
       <div id="modal-actions" class="modal-actions"></div>
     </div>
   </div>

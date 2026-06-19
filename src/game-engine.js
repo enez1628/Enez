@@ -9,6 +9,31 @@ export const SYMBOLS = [
 
 export const symbolById = new Map(SYMBOLS.map((symbol) => [symbol.id, symbol]));
 
+export function createMetaState() {
+  return {
+    stars: 0,
+    island: {
+      name: 'Zeka Adasi',
+      progress: 0,
+      decorations: ['Liman'],
+      nextDecoration: 'Cicek Bahcesi'
+    },
+    tracks: {
+      levelChest: { label: 'Seviye Kutusu', progress: 0, target: 100 },
+      freeGift: { label: 'Ucretsiz Odul', progress: 35, target: 100 },
+      matchPass: { label: 'Eslesme Pasi', progress: 0, target: 80 },
+      piggyBank: { label: 'Kumbara', progress: 0, target: 100, coins: 0 }
+    },
+    quests: [
+      { id: 'login', label: 'Bugun giris yap', progress: 1, target: 1, reward: '+10 altin' },
+      { id: 'stars', label: '3 yildiz kazan', progress: 0, target: 3, reward: '+1 ipucu' },
+      { id: 'levels', label: '2 bolum bitir', progress: 0, target: 2, reward: '+200 altin' },
+      { id: 'mistakeFree', label: '5 dogru hamle yap', progress: 0, target: 5, reward: '+1 karistir' }
+    ],
+    lastClaimedReward: null
+  };
+}
+
 export function createSeededRandom(seed) {
   let value = seed % 2147483647;
   if (value <= 0) value += 2147483646;
@@ -102,6 +127,8 @@ export function createInitialState(levels = createLevels()) {
     score: 0,
     gold: 250,
     lives: 5,
+    meta: createMetaState(),
+    pendingReward: null,
     streak: 0,
     dailyClaimed: false,
     adWatches: 0,
@@ -117,6 +144,102 @@ export function createInitialState(levels = createLevels()) {
       undo: 2
     },
     history: []
+  };
+}
+
+export function createRewardBundle(state, stars) {
+  const level = getCurrentLevel(state);
+  const bandBonus = level.band === 'Zor' ? 35 : level.band === 'Orta' ? 20 : 10;
+
+  return {
+    title: `Bolum ${level.id} Odulu`,
+    gold: 90 + stars * 45 + bandBonus,
+    stars,
+    unlimitedLivesMinutes: stars >= 3 ? 30 : 15,
+    boosters: {
+      hint: stars >= 2 ? 1 : 0,
+      shuffle: stars >= 3 ? 1 : 0,
+      undo: 1
+    },
+    progress: {
+      levelChest: 18 + stars * 4,
+      freeGift: 24 + stars * 3,
+      matchPass: 10 + stars * 5,
+      piggyBank: 16 + stars * 7,
+      island: 12 + stars * 4
+    }
+  };
+}
+
+function addProgress(track, amount) {
+  return {
+    ...track,
+    progress: Math.min(track.target, track.progress + amount)
+  };
+}
+
+function advanceQuest(quest, amount) {
+  return {
+    ...quest,
+    progress: Math.min(quest.target, quest.progress + amount)
+  };
+}
+
+export function claimPendingReward(state, multiplier = 1) {
+  if (!state.pendingReward) return state;
+
+  const reward = state.pendingReward;
+  const boostedGold = reward.gold * multiplier;
+  const boostedStars = reward.stars * multiplier;
+  const boostedBoosters = Object.fromEntries(
+    Object.entries(reward.boosters).map(([key, value]) => [key, value * multiplier])
+  );
+  const tracks = state.meta.tracks;
+  const islandProgress = Math.min(100, state.meta.island.progress + reward.progress.island * multiplier);
+
+  return {
+    ...state,
+    status: 'home',
+    gold: state.gold + boostedGold,
+    boosters: {
+      hint: state.boosters.hint + boostedBoosters.hint,
+      shuffle: state.boosters.shuffle + boostedBoosters.shuffle,
+      undo: state.boosters.undo + boostedBoosters.undo
+    },
+    pendingReward: null,
+    meta: {
+      ...state.meta,
+      stars: state.meta.stars + boostedStars,
+      lastClaimedReward: {
+        ...reward,
+        gold: boostedGold,
+        stars: boostedStars,
+        boosters: boostedBoosters
+      },
+      island: {
+        ...state.meta.island,
+        progress: islandProgress,
+        decorations: islandProgress >= 100
+          ? [...new Set([...state.meta.island.decorations, state.meta.island.nextDecoration])]
+          : state.meta.island.decorations
+      },
+      tracks: {
+        ...tracks,
+        levelChest: addProgress(tracks.levelChest, reward.progress.levelChest * multiplier),
+        freeGift: addProgress(tracks.freeGift, reward.progress.freeGift * multiplier),
+        matchPass: addProgress(tracks.matchPass, reward.progress.matchPass * multiplier),
+        piggyBank: {
+          ...addProgress(tracks.piggyBank, reward.progress.piggyBank * multiplier),
+          coins: tracks.piggyBank.coins + boostedGold
+        }
+      },
+      quests: state.meta.quests.map((quest) => {
+        if (quest.id === 'stars') return advanceQuest(quest, boostedStars);
+        if (quest.id === 'levels') return advanceQuest(quest, 1);
+        return quest;
+      })
+    },
+    message: `${boostedGold} altin ve ${boostedStars} yildiz alindi.`
   };
 }
 
@@ -294,7 +417,7 @@ export function applyMove(state, x, y, random = Math.random) {
       ...nextState,
       status: 'won',
       streak: nextState.streak + 1,
-      gold: nextState.gold + 35 + stars * 20,
+      pendingReward: createRewardBundle(nextState, stars),
       lastStars: stars,
       message: `Bolum bitti! ${stars} yildiz kazandin.`
     };
@@ -375,8 +498,9 @@ export function startLevel(state, levelIndex = state.levelIndex) {
 }
 
 export function nextLevel(state) {
+  const settledState = state.pendingReward ? claimPendingReward(state) : state;
   const nextIndex = Math.min(state.levelIndex + 1, state.levels.length - 1);
-  return startLevel({ ...state, status: 'playing' }, nextIndex);
+  return startLevel({ ...settledState, status: 'playing' }, nextIndex);
 }
 
 export function claimDailyReward(state) {
@@ -423,6 +547,10 @@ export function useHint(state) {
   return {
     ...state,
     boosters: { ...state.boosters, hint: state.boosters.hint - 1 },
+    meta: {
+      ...state.meta,
+      quests: state.meta.quests.map((quest) => quest.id === 'mistakeFree' ? advanceQuest(quest, 1) : quest)
+    },
     highlighted: best.map((item) => `${item.x},${item.y}`),
     message: best.length > 0 ? `${best.length} taslik iyi hamle isaretlendi.` : 'Uygun hamle bulunamadi.'
   };
@@ -435,6 +563,10 @@ export function useShuffle(state, random = Math.random) {
   return {
     ...pushHistory(cloneState(state)),
     boosters: { ...state.boosters, shuffle: state.boosters.shuffle - 1 },
+    meta: {
+      ...state.meta,
+      quests: state.meta.quests.map((quest) => quest.id === 'mistakeFree' ? advanceQuest(quest, 1) : quest)
+    },
     board: generateBoard(level, random),
     highlighted: [],
     message: 'Tahta karistirildi.'
