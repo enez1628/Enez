@@ -8,11 +8,16 @@ const filesToCopy = [
   ['service-worker.js', 'dist/service-worker.js']
 ];
 
-await rm('dist', { force: true, recursive: true });
-await mkdir('dist', { recursive: true });
+try {
+  await rm('dist', { force: true, recursive: true });
+  await mkdir('dist', { recursive: true });
 
-for (const [from, to] of filesToCopy) {
-  await cp(from, to, { recursive: true });
+  for (const [from, to] of filesToCopy) {
+    await cp(from, to, { recursive: true });
+  }
+
+  console.log('Built mobile web assets into dist/');
+} catch (error) {
+  console.error('Build failed:', error);
+  process.exit(1);
 }
-
-console.log('Built mobile web assets into dist/');
