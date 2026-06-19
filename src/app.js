@@ -104,20 +104,25 @@ function loadSavedState() {
       invalidTiles: [],
       history: Array.isArray(saved.history) ? saved.history : []
     };
-  } catch {
+  } catch (error) {
+    console.error('Failed to load saved state:', error);
     localStorage.removeItem(STORAGE_KEY);
     return null;
   }
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    ...state,
-    savedAt: Date.now(),
-    musicEnabled,
-    highlighted: [],
-    invalidTiles: []
-  }));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...state,
+      savedAt: Date.now(),
+      musicEnabled,
+      highlighted: [],
+      invalidTiles: []
+    }));
+  } catch (error) {
+    console.error('Failed to save state:', error);
+  }
 }
 
 function formatTime(totalSeconds) {
@@ -158,6 +163,10 @@ function renderRewardIcon(type) {
 function formatGoals(goals) {
   return Object.entries(goals).map(([symbolId, remaining]) => {
     const symbol = symbolById.get(symbolId);
+    if (!symbol) {
+      console.warn('Unknown symbol id in goals:', symbolId);
+      return '';
+    }
     return `
       <span class="goal-token ${symbol.color}">
         ${renderSymbolIcon(symbolId)}
@@ -498,12 +507,17 @@ function scheduleMusicLoop() {
 }
 
 function toggleMusic() {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
+  try {
+    if (!audioContext) {
+      audioContext = new AudioContext();
+    }
 
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch((error) => console.warn('Audio resume failed:', error));
+    }
+  } catch (error) {
+    console.warn('AudioContext not available:', error);
+    return;
   }
 
   musicEnabled = !musicEnabled;
@@ -519,12 +533,16 @@ function toggleMusic() {
 
 function startSavedMusicOnInteraction() {
   if (!musicEnabled || audioContext) return;
-  audioContext = new AudioContext();
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
+  try {
+    audioContext = new AudioContext();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch((error) => console.warn('Audio resume failed:', error));
+    }
+    scheduleMusicLoop();
+    render();
+  } catch (error) {
+    console.warn('AudioContext not available:', error);
   }
-  scheduleMusicLoop();
-  render();
 }
 
 elements.playButton.addEventListener('click', () => {
@@ -561,7 +579,9 @@ elements.watchLifeAd.addEventListener('click', () => {
 elements.levelStrip.addEventListener('click', (event) => {
   const button = event.target.closest('[data-level]');
   if (!button) return;
-  state = startLevel(state, Number(button.dataset.level));
+  const levelIndex = Number(button.dataset.level);
+  if (!Number.isFinite(levelIndex) || levelIndex < 0 || levelIndex >= state.levels.length) return;
+  state = startLevel(state, levelIndex);
   setScreen('game');
   hideModal();
   render();

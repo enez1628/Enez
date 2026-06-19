@@ -478,6 +478,10 @@ export function quitLevel(state) {
 }
 
 export function startLevel(state, levelIndex = state.levelIndex) {
+  if (levelIndex < 0 || levelIndex >= state.levels.length) {
+    console.error('Invalid levelIndex:', levelIndex);
+    levelIndex = 0;
+  }
   const level = state.levels[levelIndex];
   const random = createSeededRandom(level.seed + state.adWatches + state.streak);
 
