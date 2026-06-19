@@ -55,11 +55,12 @@ export function createLevels(count = 150) {
     const secondary = SYMBOLS[(index + 2) % symbolCount].id;
     const tertiary = SYMBOLS[(index + 4) % symbolCount].id;
     const hardLevel = levelNumber % 10 === 0;
-    const moveLimit = Math.max(14, 22 + Math.floor(levelNumber / 10) - (hardLevel ? 2 : 0));
-    const timeLimit = Math.max(70, 125 + Math.floor(levelNumber / 3) - (hardLevel ? 15 : 0));
+    const tutorialLevel = levelNumber <= 3;
+    const moveLimit = tutorialLevel ? 14 + levelNumber : Math.max(14, 22 + Math.floor(levelNumber / 10) - (hardLevel ? 2 : 0));
+    const timeLimit = tutorialLevel ? 90 : Math.max(70, 125 + Math.floor(levelNumber / 3) - (hardLevel ? 15 : 0));
     const goals = {
-      [primary]: 10 + Math.floor(levelNumber * 1.05),
-      [secondary]: 7 + Math.floor(levelNumber * 0.75)
+      [primary]: tutorialLevel ? 4 + levelNumber : 10 + Math.floor(levelNumber * 1.05),
+      [secondary]: tutorialLevel ? 3 + levelNumber : 7 + Math.floor(levelNumber * 0.75)
     };
 
     if (levelNumber >= 45) {
