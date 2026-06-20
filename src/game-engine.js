@@ -25,12 +25,277 @@ export function createMetaState() {
       piggyBank: { label: 'Kumbara', progress: 0, target: 100, coins: 0 }
     },
     quests: [
-      { id: 'login', label: 'Bugun giris yap', progress: 1, target: 1, reward: '+10 altin' },
-      { id: 'stars', label: '3 yildiz kazan', progress: 0, target: 3, reward: '+1 ipucu' },
-      { id: 'levels', label: '2 bolum bitir', progress: 0, target: 2, reward: '+200 altin' },
-      { id: 'mistakeFree', label: '5 dogru hamle yap', progress: 0, target: 5, reward: '+1 karistir' }
+      { id: 'login', label: 'Bugun giris yap', progress: 1, target: 1, reward: '+10m can', rewardIcon: 'heart' },
+      { id: 'stars', label: '10 Yildiz kazan', progress: 0, target: 10, reward: 'x2 zar', rewardIcon: 'dice' },
+      { id: 'levels', label: '2 bolum bitir', progress: 0, target: 2, reward: '+200 altin', rewardIcon: 'gold' },
+      { id: 'mistakeFree', label: 'Sayi Bombasi 10 kez tetikle', progress: 0, target: 10, reward: 'x1 ipucu', rewardIcon: 'hint' }
     ],
+    questsClaimedDate: null,
+    matchEvent: {
+      progress: 0,
+      target: 80,
+      expiresAt: Date.now() + 2 * 24 * 60 * 60 * 1000,
+      rewards: [
+        { tier: 7, type: 'heart', label: '15m Can', icon: 'heart', claimed: false },
+        { tier: 8, type: 'gift', label: 'Hediye Kutusu', icon: 'gift', claimed: false },
+        { tier: 9, type: 'gold', label: '+900 Altin', icon: 'gold', claimed: false },
+        { tier: 10, type: 'chest', label: 'Mega Odul', icon: 'chest', claimed: false }
+      ]
+    },
+    battlePass: {
+      active: false,
+      progress: 0,
+      target: 10,
+      expiresAt: Date.now() + 11 * 24 * 60 * 60 * 1000,
+      freeTier: [
+        { level: 1, type: 'heart', label: '15m Can', icon: 'heart', claimed: false },
+        { level: 2, type: 'dice', label: 'x1 Zar', icon: 'dice', claimed: false },
+        { level: 3, type: 'hint', label: 'x1 Ipucu', icon: 'hint', claimed: false },
+        { level: 4, type: 'gift', label: 'Hediye', icon: 'gift', claimed: false },
+        { level: 5, type: 'gold', label: '+500 Altin', icon: 'gold', claimed: false }
+      ],
+      premiumTier: [
+        { level: 1, type: 'heart', label: '30m Can', icon: 'heart', locked: true },
+        { level: 2, type: 'dice', label: 'x2 Zar', icon: 'dice', locked: true },
+        { level: 3, type: 'hint', label: 'x2 Ipucu', icon: 'hint', locked: true },
+        { level: 4, type: 'gift', label: 'Premium Hediye', icon: 'gift', locked: true },
+        { level: 5, type: 'chest', label: 'Mega Sandik', icon: 'chest', locked: true }
+      ]
+    },
+    village: {
+      name: 'Kardan Adam Koyu',
+      progress: 0,
+      target: 100,
+      buildings: [
+        { id: 'shop', name: 'Hediye Dukkani', cost: 10, built: false },
+        { id: 'house', name: 'Rahat Ev', cost: 10, built: false },
+        { id: 'tree', name: 'Noel Agaci', cost: 10, built: false },
+        { id: 'park', name: 'Buz Pateni Alani', cost: 15, built: false },
+        { id: 'fountain', name: 'Kar Cesmesi', cost: 20, built: false }
+      ]
+    },
+    dailySpin: {
+      lastSpinDate: null,
+      prizes: ['+100 Altin', '+200 Altin', '+1 Ipucu', '+1 Karistir', '+500 Altin', '30m Can', '+2 Ipucu', '+300 Altin'],
+      expiresAt: Date.now() + 14 * 24 * 60 * 60 * 1000
+    },
+    treasureIsland: {
+      progress: 0,
+      target: 100
+    },
+    beeRace: {
+      progress: 0,
+      target: 100
+    },
     lastClaimedReward: null
+  };
+}
+
+export function getShopPackages() {
+  return [
+    {
+      id: 'starter',
+      name: 'Baslangic Paketi',
+      gold: 900,
+      livesMinutes: 15,
+      boosters: { hint: 1, shuffle: 1, undo: 1, dice: 1 },
+      price: '₺29.99',
+      priceValue: 29.99,
+      featured: false
+    },
+    {
+      id: 'matching',
+      name: 'Eslestirme Paketi',
+      gold: 17500,
+      livesMinutes: 60,
+      boosters: { hint: 3, shuffle: 3, undo: 3, dice: 3 },
+      price: '₺69.99',
+      priceValue: 69.99,
+      featured: true,
+      badge: 'En Cok Tercih'
+    },
+    {
+      id: 'gold',
+      name: 'Altin Paketi',
+      gold: 3500,
+      livesMinutes: 0,
+      boosters: {},
+      price: '₺129.99',
+      priceValue: 129.99,
+      featured: false
+    },
+    {
+      id: 'removeAds',
+      name: 'Reklamlari Kaldir',
+      gold: 500,
+      livesMinutes: 30,
+      boosters: { hint: 2, shuffle: 2, undo: 2 },
+      price: '₺49.99',
+      priceValue: 49.99,
+      featured: false,
+      badge: 'Tek Seferlik',
+      removeAds: true
+    }
+  ];
+}
+
+export function purchasePackage(state, packageId) {
+  const packages = getShopPackages();
+  const pkg = packages.find((p) => p.id === packageId);
+  if (!pkg) return state;
+
+  const shopPurchased = [...(state.shopPurchased ?? [])];
+  if (!shopPurchased.includes(packageId)) shopPurchased.push(packageId);
+
+  return {
+    ...state,
+    gold: state.gold + pkg.gold,
+    boosters: {
+      hint: state.boosters.hint + (pkg.boosters.hint ?? 0),
+      shuffle: state.boosters.shuffle + (pkg.boosters.shuffle ?? 0),
+      undo: state.boosters.undo + (pkg.boosters.undo ?? 0)
+    },
+    adsRemoved: state.adsRemoved || Boolean(pkg.removeAds),
+    shopPurchased,
+    message: `${pkg.name} satin alindi!`
+  };
+}
+
+export function purchaseBattlePass(state) {
+  if (state.meta.battlePass.active) return state;
+
+  return {
+    ...state,
+    meta: {
+      ...state.meta,
+      battlePass: {
+        ...state.meta.battlePass,
+        active: true
+      }
+    },
+    message: 'Eslestirme Pas aktif edildi!'
+  };
+}
+
+export function watchAdForGold(state) {
+  return {
+    ...state,
+    gold: state.gold + 50,
+    adWatches: state.adWatches + 1,
+    message: 'Reklam odulu geldi: +50 altin.'
+  };
+}
+
+export function shouldShowInterstitial(state) {
+  if (state.adsRemoved) return false;
+  const completedLevels = state.levelIndex;
+  return completedLevels > 0 && completedLevels % 3 === 0;
+}
+
+export function getGoldPackages() {
+  return [
+    { id: 'gold_small', gold: 500, price: '₺14.99', priceValue: 14.99 },
+    { id: 'gold_medium', gold: 1500, price: '₺34.99', priceValue: 34.99, badge: 'Populer' },
+    { id: 'gold_large', gold: 5000, price: '₺89.99', priceValue: 89.99, badge: 'En Degerli' }
+  ];
+}
+
+export function buildVillageBuilding(state, buildingId) {
+  const village = state.meta.village;
+  const building = village.buildings.find((b) => b.id === buildingId);
+  if (!building || building.built || state.meta.stars < building.cost) return state;
+
+  const updatedBuildings = village.buildings.map((b) =>
+    b.id === buildingId ? { ...b, built: true } : b
+  );
+  const builtCount = updatedBuildings.filter((b) => b.built).length;
+  const progress = Math.round((builtCount / updatedBuildings.length) * 100);
+
+  return {
+    ...state,
+    meta: {
+      ...state.meta,
+      stars: state.meta.stars - building.cost,
+      village: {
+        ...village,
+        buildings: updatedBuildings,
+        progress
+      }
+    },
+    message: `${building.name} yapildi!`
+  };
+}
+
+export function spinDailyWheel(state) {
+  const today = new Date().toDateString();
+  if (state.meta.dailySpin.lastSpinDate === today) return state;
+
+  const prizes = state.meta.dailySpin.prizes;
+  const prizeIndex = Math.floor(Math.random() * prizes.length);
+  const prize = prizes[prizeIndex];
+
+  let gold = 0;
+  let hintBonus = 0;
+  let shuffleBonus = 0;
+
+  if (prize.includes('Altin')) {
+    const match = prize.match(/\+(\d+)/);
+    gold = match ? Number(match[1]) : 0;
+  } else if (prize.includes('Ipucu')) {
+    const match = prize.match(/\+(\d+)/);
+    hintBonus = match ? Number(match[1]) : 1;
+  } else if (prize.includes('Karistir')) {
+    const match = prize.match(/\+(\d+)/);
+    shuffleBonus = match ? Number(match[1]) : 1;
+  }
+
+  return {
+    ...state,
+    gold: state.gold + gold,
+    boosters: {
+      ...state.boosters,
+      hint: state.boosters.hint + hintBonus,
+      shuffle: state.boosters.shuffle + shuffleBonus
+    },
+    meta: {
+      ...state.meta,
+      dailySpin: {
+        ...state.meta.dailySpin,
+        lastSpinDate: today
+      }
+    },
+    message: `Gunluk cark odulu: ${prize}`
+  };
+}
+
+export function claimQuestReward(state, questId) {
+  const quest = state.meta.quests.find((q) => q.id === questId);
+  if (!quest || quest.progress < quest.target || quest.claimed) return state;
+
+  let gold = 0;
+  let hintBonus = 0;
+
+  if (quest.reward.includes('altin')) {
+    const match = quest.reward.match(/\+(\d+)/);
+    gold = match ? Number(match[1]) : 0;
+  } else if (quest.reward.includes('ipucu')) {
+    hintBonus = 1;
+  }
+
+  return {
+    ...state,
+    gold: state.gold + gold,
+    boosters: {
+      ...state.boosters,
+      hint: state.boosters.hint + hintBonus
+    },
+    meta: {
+      ...state.meta,
+      quests: state.meta.quests.map((q) =>
+        q.id === questId ? { ...q, claimed: true } : q
+      )
+    },
+    message: `Gorev odulu alindi: ${quest.reward}`
   };
 }
 
@@ -133,6 +398,8 @@ export function createInitialState(levels = createLevels()) {
     streak: 0,
     dailyClaimedDate: null,
     adWatches: 0,
+    adsRemoved: false,
+    shopPurchased: [],
     status: 'home',
     message: 'Ayni sembolden 2+ tas sec.',
     highlighted: [],
