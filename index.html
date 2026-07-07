@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Melike ve Enez</title>
   <style>
     body {
@@ -30,6 +31,10 @@
     audio {
       margin-top: 30px;
     }
+    @media (max-width: 480px) {
+      h1 { font-size: 2em; }
+      p { font-size: 1.1em; padding: 0 15px; }
+    }
   </style>
 </head>
 <body>
@@ -40,9 +45,22 @@
 
   <img src="https://i.hizliresim.com/cvvp0po.jpeg" alt="Melike ve Enez"/>
 
-  <audio controls autoplay loop>
-    <source src="https://dl.sndup.net/3s9n/Ahmet_Kaya_Siir.mp3" type="audio/mp3">
+  <audio id="muzik" controls autoplay loop muted>
+    <source src="https://dl.sndup.net/3s9n/Ahmet_Kaya_Siir.mp3" type="audio/mpeg">
     Tarayıcınız müzik çalmayı desteklemiyor.
   </audio>
+
+  <script>
+    // Tarayıcılar sesli autoplay'i engeller; ilk dokunuşta sesi açıp başlatıyoruz.
+    const muzik = document.getElementById('muzik');
+    function sesiBaslat() {
+      muzik.muted = false;
+      muzik.play().catch(function () {});
+      document.removeEventListener('click', sesiBaslat);
+      document.removeEventListener('touchstart', sesiBaslat);
+    }
+    document.addEventListener('click', sesiBaslat);
+    document.addEventListener('touchstart', sesiBaslat);
+  </script>
 </body>
 </html>
